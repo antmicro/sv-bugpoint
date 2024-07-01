@@ -7,6 +7,10 @@
 #include <slang/syntax/AllSyntax.h>
 #include <slang/syntax/SyntaxPrinter.h>
 #include <iostream>
+#include <fstream>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <filesystem>
 
 #define DERIVED static_cast<TDerived*>(this)
 
@@ -73,24 +77,54 @@ class MyRemover: public OneTimeRewriter<MyRemover> {
 };
 
 
-bool test(int i) {
-  // Just for PoC that we can remove nodes granularly
-  return i != 5;
+bool test(std::shared_ptr<slang::syntax::SyntaxTree> tree) {
+  std::ofstream file("uvm_test.sv");
+  file.rdbuf()->pubsetbuf(0, 0);
+  file << slang::syntax::SyntaxPrinter::printFile(*tree);
+
+  pid_t pid = fork();
+  if(pid == -1) {
+      perror("fork failed");
+      exit(1);
+  }
+  else if(pid == 0) { // we are inside child
+      const char* const argv[] = {"./test.sh", "uvm_test.sv", NULL};
+      if(execvp(argv[0], const_cast<char* const*>(argv))) { // replace child with prog
+          perror("child: execvp error");
+          _exit(1);
+      }
+  }
+  else { // we are in parent
+      int wstatus;
+      int rc = waitpid(pid, &wstatus, 0);
+      if(rc <= 0 || !WIFEXITED(wstatus)) {
+        perror("waitpid failed");
+        exit(1);
+      }
+      if(WEXITSTATUS(wstatus)) {
+        return false;
+      }
+      else {
+        std::filesystem::copy("uvm_test.sv", "uvm_minimized.sv", std::filesystem::copy_options::overwrite_existing);
+        return true;
+      }
+  }
+
+  return false; // just to make compiler happy - will never get here
+
 }
 
 void removeLoop(std::shared_ptr<slang::syntax::SyntaxTree> tree) {
   MyRemover rewriter;
   bool notEnd = true;
-  int i = 0;
   while(notEnd) {
     rewriter.startPoint = rewriter.removedSuccessor;
     auto tmpTree = rewriter.transform(tree);
-    if(test(i)) {
+    if(test(tmpTree)) {
       tree = tmpTree;
     }
     notEnd = rewriter.state == MyRemover::SKIP_TO_END;
     rewriter.state = MyRemover::SKIP_TO_START;
-    i++;
   }
   std::cout << slang::syntax::SyntaxPrinter::printFile(*tree);
 }
