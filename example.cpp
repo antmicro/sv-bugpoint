@@ -79,10 +79,40 @@ class GenforRemover: public OneTimeRewriter<GenforRemover> {
 class BodyRemover: public OneTimeRewriter<BodyRemover> {
   public:
   void handle(const slang::syntax::FunctionDeclarationSyntax& node) {
+      std::cerr << typeid(node).name() << "\n";
       for(auto item: node.items) {
         remove(*item);
         std::cerr << item->toString();
       }
+      removed = &node;
+      state = REGISTER_SUCCESSOR;
+  }
+
+  void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
+      std::cerr << typeid(node).name() << "\n";
+      for(auto item: node.members) {
+        remove(*item);
+        std::cerr << item->toString();
+      }
+      removed = &node;
+      state = REGISTER_SUCCESSOR;
+  }
+};
+
+class DeclRemover: public OneTimeRewriter<DeclRemover> {
+  public:
+  void handle(const slang::syntax::FunctionDeclarationSyntax& node) {
+      std::cerr << typeid(node).name() << "\n";
+      std::cerr << node.toString() << "\n";
+      remove(node);
+      removed = &node;
+      state = REGISTER_SUCCESSOR;
+  }
+
+  void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
+      std::cerr << typeid(node).name() << "\n";
+      std::cerr << node.toString() << "\n";
+      remove(node);
       removed = &node;
       state = REGISTER_SUCCESSOR;
   }
@@ -145,6 +175,7 @@ int main() {
       auto tree = *treeOrErr;
       removeLoop(GenforRemover(), tree);
       removeLoop(BodyRemover(), tree);
+      removeLoop(DeclRemover(), tree);
   }
   else {
       /* do something with result.error() */
