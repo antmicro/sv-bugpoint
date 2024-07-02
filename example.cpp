@@ -24,22 +24,20 @@ enum RewriterState {
 template<typename TDerived>
 class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
   public:
-    // we store SyntaxNode* despite the fact that we are only intrested in SyntaxLocation
-    // (SyntaxLocation does not have assign operator implemented)
-    const slang::syntax::SyntaxNode* startPoint = nullptr;
-    const slang::syntax::SyntaxNode* removed = nullptr;
-    const slang::syntax::SyntaxNode* removedSuccessor = nullptr;
+    slang::SourceRange startPoint;
+    slang::SourceRange removed;
+    slang::SourceRange removedSuccessor;
 
     RewriterState state = HANDLE_ALLOWED;
 
     template<typename T>
     void visit(T&& t) {
-        if(state == SKIP_TO_START && t.sourceRange() == startPoint->sourceRange()) {
+        if(state == SKIP_TO_START && t.sourceRange() == startPoint) {
             state = HANDLE_ALLOWED;
         }
 
         if(state == REGISTER_SUCCESSOR) {
-          removedSuccessor = &t;
+          removedSuccessor = t.sourceRange();
           state = SKIP_TO_END;
           return;
         }
@@ -71,7 +69,7 @@ class GenforRemover: public OneTimeRewriter<GenforRemover> {
   void handle(const slang::syntax::LoopGenerateSyntax& node) {
       std::cerr << node.toString() << "\n";
       remove(node);
-      removed = &node;
+      removed = node.sourceRange();
       state = REGISTER_SUCCESSOR;
   }
 };
@@ -84,7 +82,7 @@ class BodyRemover: public OneTimeRewriter<BodyRemover> {
         remove(*item);
         std::cerr << item->toString();
       }
-      removed = &node;
+      removed = node.sourceRange();
       state = REGISTER_SUCCESSOR;
   }
 
@@ -94,7 +92,7 @@ class BodyRemover: public OneTimeRewriter<BodyRemover> {
         remove(*item);
         std::cerr << item->toString();
       }
-      removed = &node;
+      removed = node.sourceRange();
       state = REGISTER_SUCCESSOR;
   }
 };
@@ -105,7 +103,7 @@ class DeclRemover: public OneTimeRewriter<DeclRemover> {
       std::cerr << typeid(node).name() << "\n";
       std::cerr << node.toString() << "\n";
       remove(node);
-      removed = &node;
+      removed = node.sourceRange();
       state = REGISTER_SUCCESSOR;
   }
 
@@ -113,7 +111,7 @@ class DeclRemover: public OneTimeRewriter<DeclRemover> {
       std::cerr << typeid(node).name() << "\n";
       std::cerr << node.toString() << "\n";
       remove(node);
-      removed = &node;
+      removed = node.sourceRange();
       state = REGISTER_SUCCESSOR;
   }
 };
