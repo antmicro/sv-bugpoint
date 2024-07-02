@@ -118,6 +118,33 @@ class DeclRemover: public OneTimeRewriter<DeclRemover> {
   }
 };
 
+// class AssertionPrinter: public slang::syntax::SyntaxVisitor<AssertionPrinter> {
+//   public:
+//   void handle(const slang::syntax::ActionBlockSyntax& node) {
+//       std::cout << typeid(node).name() << "\n";
+//       std::cout << node.toString() << "\n";
+//       visitDefault(node);
+//   }
+// };
+
+// class ActionBlockPrinter: public slang::syntax::SyntaxVisitor<ActionBlockPrinter> {
+//   public:
+//   void handle(const slang::syntax::ActionBlockSyntax& node) {
+//       std::cout << node.toString() << "\n";
+//       visitDefault(node);
+//   }
+// };
+
+// class AllPrinter: public slang::syntax::SyntaxVisitor<AllPrinter> {
+//   public:
+//   template<typename T>
+//   void handle(const T& node) {
+//       std::cout << typeid(node).name() << "\n";
+//       std::cout << node.toString() << "\n";
+//       visitDefault(node);
+//   }
+// };
+
 bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
   std::ofstream file("uvm_test.sv");
   file.rdbuf()->pubsetbuf(0, 0);
@@ -173,6 +200,8 @@ int main() {
   auto treeOrErr = slang::syntax::SyntaxTree::fromFile("uvm.sv");
   if (treeOrErr) {
       auto tree = *treeOrErr;
+      // AllPrinter printer;
+      // printer.visit(tree->root());
       removeLoop(GenforRemover(), tree);
       removeLoop(BodyRemover(), tree);
       removeLoop(DeclRemover(), tree);
