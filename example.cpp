@@ -12,25 +12,25 @@
 #include <sys/wait.h>
 #include <filesystem>
 
+enum RewriterState {
+  SKIP_TO_START,
+  HANDLE_ALLOWED,
+  REGISTER_SUCCESSOR,
+  SKIP_TO_END,
+};
+
 #define DERIVED static_cast<TDerived*>(this)
 
 template<typename TDerived>
 class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
   public:
-    enum State {
-      SKIP_TO_START,
-      HANDLE_ALLOWED,
-      REGISTER_SUCCESSOR,
-      SKIP_TO_END,
-    };
-
     // we store SyntaxNode* despite the fact that we are only intrested in SyntaxLocation
     // (SyntaxLocation does not have assign operator implemented)
     const slang::syntax::SyntaxNode* startPoint = nullptr;
     const slang::syntax::SyntaxNode* removed = nullptr;
     const slang::syntax::SyntaxNode* removedSuccessor = nullptr;
 
-    State state = HANDLE_ALLOWED;
+    RewriterState state = HANDLE_ALLOWED;
 
     template<typename T>
     void visit(T&& t) {
@@ -66,7 +66,7 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
   }
 };
 
-class MyRemover: public OneTimeRewriter<MyRemover> {
+class GenforRemover: public OneTimeRewriter<GenforRemover> {
   public:
   void handle(const slang::syntax::LoopGenerateSyntax& node) {
       std::cerr << node.toString() << "\n";
@@ -76,8 +76,19 @@ class MyRemover: public OneTimeRewriter<MyRemover> {
   }
 };
 
+class BodyRemover: public OneTimeRewriter<BodyRemover> {
+  public:
+  void handle(const slang::syntax::FunctionDeclarationSyntax& node) {
+      for(auto item: node.items) {
+        remove(*item);
+        std::cerr << item->toString();
+      }
+      removed = &node;
+      state = REGISTER_SUCCESSOR;
+  }
+};
 
-bool test(std::shared_ptr<slang::syntax::SyntaxTree> tree) {
+bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
   std::ofstream file("uvm_test.sv");
   file.rdbuf()->pubsetbuf(0, 0);
   file << slang::syntax::SyntaxPrinter::printFile(*tree);
@@ -114,8 +125,8 @@ bool test(std::shared_ptr<slang::syntax::SyntaxTree> tree) {
 
 }
 
-void removeLoop(std::shared_ptr<slang::syntax::SyntaxTree> tree) {
-  MyRemover rewriter;
+template<typename T>
+void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
   bool notEnd = true;
   while(notEnd) {
     rewriter.startPoint = rewriter.removedSuccessor;
@@ -123,18 +134,17 @@ void removeLoop(std::shared_ptr<slang::syntax::SyntaxTree> tree) {
     if(test(tmpTree)) {
       tree = tmpTree;
     }
-    notEnd = rewriter.state == MyRemover::SKIP_TO_END;
-    rewriter.state = MyRemover::SKIP_TO_START;
+    notEnd = rewriter.state == SKIP_TO_END;
+    rewriter.state = SKIP_TO_START;
   }
-  std::cout << slang::syntax::SyntaxPrinter::printFile(*tree);
 }
 
 int main() {
-  MyRemover rewriter;
   auto treeOrErr = slang::syntax::SyntaxTree::fromFile("uvm.sv");
   if (treeOrErr) {
       auto tree = *treeOrErr;
-      removeLoop(tree);
+      removeLoop(GenforRemover(), tree);
+      removeLoop(BodyRemover(), tree);
   }
   else {
       /* do something with result.error() */
