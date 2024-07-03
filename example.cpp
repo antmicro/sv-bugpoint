@@ -21,6 +21,10 @@ enum RewriterState {
   SKIP_TO_END,
 };
 
+const std::string originalFilename = "uvm.sv";
+const std::string outputFilename = "uvm_minimized.sv";
+const std::string tmpFilename = "uvm_test.sv";
+
 #define DERIVED static_cast<TDerived*>(this)
 
 template<typename TDerived>
@@ -187,7 +191,7 @@ class DeclRemover: public OneTimeRewriter<DeclRemover> {
 // };
 
 bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
-  std::ofstream file("uvm_test.sv");
+  std::ofstream file(tmpFilename);
   file.rdbuf()->pubsetbuf(0, 0);
   file << slang::syntax::SyntaxPrinter::printFile(*tree);
 
@@ -197,7 +201,7 @@ bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
       exit(1);
   }
   else if(pid == 0) { // we are inside child
-      const char* const argv[] = {"./test.sh", "uvm_test.sv", NULL};
+      const char* const argv[] = {"./test.sh", tmpFilename.c_str(), NULL};
       if(execvp(argv[0], const_cast<char* const*>(argv))) { // replace child with prog
           perror("child: execvp error");
           _exit(1);
@@ -214,7 +218,7 @@ bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
         return false;
       }
       else {
-        std::filesystem::copy("uvm_test.sv", "uvm_minimized.sv", std::filesystem::copy_options::overwrite_existing);
+        std::filesystem::copy(tmpFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
         return true;
       }
   }
@@ -236,7 +240,7 @@ void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::Synt
 }
 
 int main() {
-  auto treeOrErr = slang::syntax::SyntaxTree::fromFile("uvm.sv");
+  auto treeOrErr = slang::syntax::SyntaxTree::fromFile(originalFilename);
   if (treeOrErr) {
       auto tree = *treeOrErr;
       // AllPrinter printer;
