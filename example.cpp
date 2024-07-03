@@ -75,10 +75,30 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
       removedSuccessor = slang::SourceRange::NoLocation;
 
       auto tree2 = slang::syntax::SyntaxRewriter<TDerived>::transform(tree);
+
       // I'm not sure about what intended behavior is, but head of SyntaxRewriter's allocator is nulled after traversal,
       // leading to NULL dereference when rewriter is reused. This is dirty work around this. TODO: examine it more carefully.
       this->alloc = slang::BumpAllocator();
-      return tree2;
+
+      if(state != SKIP_TO_END) { // it means that we traversed whole thing
+        return nullptr;
+      } else {
+        return tree2;
+      }
+  }
+
+  void moveToSuccesor() {
+      startPoint = removedSuccessor;
+      state = SKIP_TO_START;
+  }
+
+  void moveToChildOrSuccesor() {
+      if(removedChild != slang::SourceRange::NoLocation) {
+        startPoint = removedChild;
+      } else {
+        startPoint = removedSuccessor;
+      }
+      state = SKIP_TO_START;
   }
 };
 
@@ -205,22 +225,13 @@ bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
 
 template<typename T>
 void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
-  bool notEnd = true;
-  while(notEnd) {
-    auto tmpTree = rewriter.transform(tree);
+  while(auto tmpTree = rewriter.transform(tree)) {
     if(test(tmpTree)) {
       tree = tmpTree;
-      rewriter.startPoint = rewriter.removedSuccessor;
+      rewriter.moveToSuccesor();
     } else {
-      if(rewriter.removedChild != slang::SourceRange::NoLocation) {
-        rewriter.startPoint = rewriter.removedChild;
-      } else {
-        rewriter.startPoint = rewriter.removedSuccessor;
-      }
+      rewriter.moveToChildOrSuccesor();
     }
-    notEnd = rewriter.state == SKIP_TO_END;
-    // if(rewriter.startPoint == slang::SourceRange::NoLocation) notEnd=false;
-    rewriter.state = SKIP_TO_START;
   }
 }
 
