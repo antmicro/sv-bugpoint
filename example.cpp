@@ -15,6 +15,8 @@
 enum RewriterState {
   SKIP_TO_START,
   HANDLE_ALLOWED,
+  REGISTER_CHILD,
+  WAIT_FOR_PARENT_EXIT,
   REGISTER_SUCCESSOR,
   SKIP_TO_END,
 };
@@ -26,6 +28,7 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
   public:
     slang::SourceRange startPoint;
     slang::SourceRange removed;
+    slang::SourceRange removedChild;
     slang::SourceRange removedSuccessor;
 
     RewriterState state = HANDLE_ALLOWED;
@@ -36,26 +39,41 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
             state = HANDLE_ALLOWED;
         }
 
-        if(state == REGISTER_SUCCESSOR) {
+        if(state == REGISTER_CHILD && t.sourceRange() != slang::SourceRange::NoLocation) {
+          removedChild = t.sourceRange();
+          state = WAIT_FOR_PARENT_EXIT;
+          return;
+        }
+
+        if(state == REGISTER_SUCCESSOR && t.sourceRange() != slang::SourceRange::NoLocation) {
           removedSuccessor = t.sourceRange();
           state = SKIP_TO_END;
           return;
         }
 
-        if(state == SKIP_TO_END) {
+        if(state == SKIP_TO_END || state == WAIT_FOR_PARENT_EXIT) {
           return;
         }
 
 
         if constexpr (requires { DERIVED->handle(t); }) {
             if(state == HANDLE_ALLOWED) DERIVED->handle(t);
+            else DERIVED->visitDefault(t);
         }
         else {
             DERIVED->visitDefault(t);
         }
+
+        if((state == REGISTER_CHILD || state == WAIT_FOR_PARENT_EXIT) && t.sourceRange() == removed) {
+          state = REGISTER_SUCCESSOR;
+        }
   }
 
   std::shared_ptr<slang::syntax::SyntaxTree> transform(const std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
+      removed = slang::SourceRange::NoLocation;
+      removedChild = slang::SourceRange::NoLocation;
+      removedSuccessor = slang::SourceRange::NoLocation;
+
       auto tree2 = slang::syntax::SyntaxRewriter<TDerived>::transform(tree);
       // I'm not sure about what intended behavior is, but head of SyntaxRewriter's allocator is nulled after traversal,
       // leading to NULL dereference when rewriter is reused. This is dirty work around this. TODO: examine it more carefully.
@@ -70,7 +88,8 @@ class GenforRemover: public OneTimeRewriter<GenforRemover> {
       std::cerr << node.toString() << "\n";
       remove(node);
       removed = node.sourceRange();
-      state = REGISTER_SUCCESSOR;
+      state = REGISTER_CHILD;
+      visitDefault(node);
   }
 };
 
@@ -83,7 +102,8 @@ class BodyRemover: public OneTimeRewriter<BodyRemover> {
         std::cerr << item->toString();
       }
       removed = node.sourceRange();
-      state = REGISTER_SUCCESSOR;
+      state = REGISTER_CHILD; // TODO: examine whether we register right child here
+      visitDefault(node);
   }
 
   void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
@@ -93,7 +113,8 @@ class BodyRemover: public OneTimeRewriter<BodyRemover> {
         std::cerr << item->toString();
       }
       removed = node.sourceRange();
-      state = REGISTER_SUCCESSOR;
+      state = REGISTER_CHILD; // TODO: examine whether we register right child here
+      visitDefault(node);
   }
 };
 
@@ -104,7 +125,8 @@ class DeclRemover: public OneTimeRewriter<DeclRemover> {
       std::cerr << node.toString() << "\n";
       remove(node);
       removed = node.sourceRange();
-      state = REGISTER_SUCCESSOR;
+      state = REGISTER_CHILD;
+      visitDefault(node);
   }
 
   void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
@@ -112,7 +134,8 @@ class DeclRemover: public OneTimeRewriter<DeclRemover> {
       std::cerr << node.toString() << "\n";
       remove(node);
       removed = node.sourceRange();
-      state = REGISTER_SUCCESSOR;
+      state = REGISTER_CHILD;
+      visitDefault(node);
   }
 };
 
@@ -184,12 +207,19 @@ template<typename T>
 void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
   bool notEnd = true;
   while(notEnd) {
-    rewriter.startPoint = rewriter.removedSuccessor;
     auto tmpTree = rewriter.transform(tree);
     if(test(tmpTree)) {
       tree = tmpTree;
+      rewriter.startPoint = rewriter.removedSuccessor;
+    } else {
+      if(rewriter.removedChild != slang::SourceRange::NoLocation) {
+        rewriter.startPoint = rewriter.removedChild;
+      } else {
+        rewriter.startPoint = rewriter.removedSuccessor;
+      }
     }
     notEnd = rewriter.state == SKIP_TO_END;
+    // if(rewriter.startPoint == slang::SourceRange::NoLocation) notEnd=false;
     rewriter.state = SKIP_TO_START;
   }
 }
