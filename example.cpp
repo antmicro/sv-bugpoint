@@ -24,6 +24,7 @@ enum RewriterState {
 const std::string originalFilename = "uvm.sv";
 const std::string outputFilename = "uvm_minimized.sv";
 const std::string tmpFilename = "uvm_test.sv";
+const std::string statsFilename = "bugpoint_stats";
 
 #define DERIVED static_cast<TDerived*>(this)
 
@@ -224,30 +225,82 @@ bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
   }
 
   return false; // just to make compiler happy - will never get here
-
 }
 
+int countLines(std::string filename) {
+    int count = 0;
+    std::ifstream file(filename);
+    for(std::string line; std::getline(file, line); ++count) {} // probably not a smartest way, but should be fine
+    return count;
+}
+
+struct Stats {
+  int successCount = 0;
+  int rollbackCount = 0;
+  int linesBefore;
+  int linesAfter;
+  // coś startTime
+  // coś endTime
+
+  void begin()
+  {
+    linesBefore = countLines(outputFilename);
+  }
+
+  void end()
+  {
+    linesAfter = countLines(outputFilename);
+  }
+
+  std::string toStr()
+  {
+    std::stringstream tmp;
+    int lines = linesBefore - linesAfter;
+    tmp << "lines removed: " << lines << ", successes: " << successCount  << ", rollbacks: " << rollbackCount << "\n";
+    return tmp.str();
+  }
+
+  void report(std::string stageName)
+  {
+    std::cerr << stageName << " STAGE COMPLETE\n" << toStr();
+    std::ofstream file(statsFilename, std::ios_base::app);
+    file << stageName << " STAGE COMPLETE\n" << toStr();
+  }
+  // TODO:
+  // accumulate(Stats rhs) // extend previous stat with sub-stat
+};
+
 template<typename T>
-void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
+void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::SyntaxTree>& tree, std::string stageName) {
+  Stats stats;
+  stats.begin();
   while(auto tmpTree = rewriter.transform(tree)) {
     if(test(tmpTree)) {
       tree = tmpTree;
       rewriter.moveToSuccesor();
+      stats.successCount++;
     } else {
       rewriter.moveToChildOrSuccesor();
+      stats.rollbackCount++;
     }
   }
+  stats.end();
+  stats.report(stageName);
 }
 
 int main() {
   auto treeOrErr = slang::syntax::SyntaxTree::fromFile(originalFilename);
+
+  std::filesystem::copy(originalFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
+  std::filesystem::remove(statsFilename);
+
   if (treeOrErr) {
       auto tree = *treeOrErr;
       // AllPrinter printer;
       // printer.visit(tree->root());
-      removeLoop(GenforRemover(), tree);
-      removeLoop(BodyRemover(), tree);
-      removeLoop(DeclRemover(), tree);
+      removeLoop(GenforRemover(), tree, "genforRemover");
+      removeLoop(BodyRemover(), tree, "bodyRemover");
+      removeLoop(DeclRemover(), tree, "declRemover");
   }
   else {
       /* do something with result.error() */
