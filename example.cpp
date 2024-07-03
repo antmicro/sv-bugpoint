@@ -1,5 +1,6 @@
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/util/BumpAllocator.h"
+#include <chrono>
 #include <slang/text/SourceManager.h>
 #include <slang/text/SourceLocation.h>
 #include <slang/syntax/SyntaxTree.h>
@@ -239,24 +240,31 @@ struct Stats {
   int rollbackCount = 0;
   int linesBefore;
   int linesAfter;
-  // coś startTime
-  // coś endTime
+  std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
+  std::chrono::time_point<std::chrono::high_resolution_clock> endTime;
 
   void begin()
   {
     linesBefore = countLines(outputFilename);
+    startTime = std::chrono::high_resolution_clock::now();
   }
 
   void end()
   {
     linesAfter = countLines(outputFilename);
+    endTime = std::chrono::high_resolution_clock::now();
   }
 
   std::string toStr()
   {
     std::stringstream tmp;
     int lines = linesBefore - linesAfter;
-    tmp << "lines removed: " << lines << ", successes: " << successCount  << ", rollbacks: " << rollbackCount << "\n";
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime);
+    tmp << "lines removed: " << lines
+        << ", successes: " << successCount
+        << ", rollbacks: " << rollbackCount
+        << ", seconds: " << duration
+        <<  "\n";
     return tmp.str();
   }
 
