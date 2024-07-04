@@ -245,8 +245,8 @@ int countLines(std::string filename) {
 }
 
 struct Stats {
-  int successCount = 0;
-  int rollbackCount = 0;
+  int commits = 0;
+  int rollbacks = 0;
   int linesBefore;
   int linesAfter;
   std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
@@ -264,24 +264,26 @@ struct Stats {
     endTime = std::chrono::high_resolution_clock::now();
   }
 
-  std::string toStr()
+  std::string toStr(std::string stage)
   {
     std::stringstream tmp;
     int lines = linesBefore - linesAfter;
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime);
-    tmp << "lines removed: " << lines
-        << ", successes: " << successCount
-        << ", rollbacks: " << rollbackCount
-        << ", seconds: " << duration
-        <<  "\n";
+    int attempts = rollbacks + commits;
+    tmp << stage << '\t' << lines << '\t' << commits << '\t' << rollbacks << '\t' << attempts << '\t' << duration << '\n';
     return tmp.str();
   }
 
-  void report(std::string stageName)
+  void report(std::string stage)
   {
-    std::cerr << stageName << " STAGE COMPLETE\n" << toStr();
+    std::cerr << toStr(stage);
     std::ofstream file(statsFilename, std::ios_base::app);
-    file << stageName << " STAGE COMPLETE\n" << toStr();
+    file << toStr(stage);
+  }
+
+  static void writeHeader() {
+    std::ofstream file(statsFilename);
+    file << "stage\tlines_removed\tcommits\trollbacks\tattempts\ttime\n";
   }
   // TODO:
   // accumulate(Stats rhs) // extend previous stat with sub-stat
@@ -295,10 +297,10 @@ void removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, s
     if(test(tmpTree)) {
       tree = tmpTree;
       rewriter.moveStartToSuccesor();
-      stats.successCount++;
+      stats.commits++;
     } else {
       rewriter.moveStartToChildOrSuccesor();
-      stats.rollbackCount++;
+      stats.rollbacks++;
     }
   }
   stats.end();
@@ -307,9 +309,8 @@ void removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, s
 
 int main() {
   auto treeOrErr = SyntaxTree::fromFile(originalFilename);
-
   std::filesystem::copy(originalFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
-  std::filesystem::remove(statsFilename);
+  Stats::writeHeader();
 
   if (treeOrErr) {
       auto tree = *treeOrErr;
