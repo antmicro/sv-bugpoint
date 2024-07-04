@@ -24,7 +24,7 @@ const std::string statsFilename = "bugpoint_stats";
 #define DERIVED static_cast<TDerived*>(this)
 
 template<typename TDerived>
-class OneTimeRewriter: public SyntaxRewriter<TDerived> {
+class OneTimeRemover: public SyntaxRewriter<TDerived> {
   public:
     enum State {
       SKIP_TO_START,
@@ -43,19 +43,19 @@ class OneTimeRewriter: public SyntaxRewriter<TDerived> {
     State state = REMOVAL_ALLOWED;
 
     template<typename T>
-    void visit(T&& t) {
-        if(state == SKIP_TO_START && t.sourceRange() == startPoint) {
+    void visit(T&& node) {
+        if(state == SKIP_TO_START && node.sourceRange() == startPoint) {
             state = REMOVAL_ALLOWED;
         }
 
-        if(state == REGISTER_CHILD && t.sourceRange() != SourceRange::NoLocation) {
-          removedChild = t.sourceRange();
+        if(state == REGISTER_CHILD && node.sourceRange() != SourceRange::NoLocation) {
+          removedChild = node.sourceRange();
           state = WAIT_FOR_PARENT_EXIT;
           return;
         }
 
-        if(state == REGISTER_SUCCESSOR && t.sourceRange() != SourceRange::NoLocation) {
-          removedSuccessor = t.sourceRange();
+        if(state == REGISTER_SUCCESSOR && node.sourceRange() != SourceRange::NoLocation) {
+          removedSuccessor = node.sourceRange();
           state = SKIP_TO_END;
           return;
         }
@@ -65,14 +65,14 @@ class OneTimeRewriter: public SyntaxRewriter<TDerived> {
         }
 
 
-        if constexpr (requires { DERIVED->handle(t); }) {
-            DERIVED->handle(t);
+        if constexpr (requires { DERIVED->handle(node); }) {
+            DERIVED->handle(node);
         }
         else {
-            DERIVED->visitDefault(t);
+            DERIVED->visitDefault(node);
         }
 
-        if((state == REGISTER_CHILD || state == WAIT_FOR_PARENT_EXIT) && t.sourceRange() == removed) {
+        if((state == REGISTER_CHILD || state == WAIT_FOR_PARENT_EXIT) && node.sourceRange() == removed) {
           state = REGISTER_SUCCESSOR;
         }
   }
@@ -121,12 +121,12 @@ class OneTimeRewriter: public SyntaxRewriter<TDerived> {
       }
   }
 
-  void moveToSuccesor() {
+  void moveStartToSuccesor() {
       startPoint = removedSuccessor;
       state = SKIP_TO_START;
   }
 
-  void moveToChildOrSuccesor() {
+  void moveStartToChildOrSuccesor() {
       if(removedChild != SourceRange::NoLocation) {
         startPoint = removedChild;
       } else {
@@ -136,14 +136,14 @@ class OneTimeRewriter: public SyntaxRewriter<TDerived> {
   }
 };
 
-class GenforRemover: public OneTimeRewriter<GenforRemover> {
+class GenforRemover: public OneTimeRemover<GenforRemover> {
   public:
   void handle(const LoopGenerateSyntax& node) {
     removeNode(node);
   }
 };
 
-class BodyRemover: public OneTimeRewriter<BodyRemover> {
+class BodyRemover: public OneTimeRemover<BodyRemover> {
   public:
   void handle(const FunctionDeclarationSyntax& node) {
       removeChildList(node, node.items);
@@ -154,7 +154,7 @@ class BodyRemover: public OneTimeRewriter<BodyRemover> {
   }
 };
 
-class DeclRemover: public OneTimeRewriter<DeclRemover> {
+class DeclRemover: public OneTimeRemover<DeclRemover> {
   public:
   void handle(const FunctionDeclarationSyntax& node) {
       removeNode(node);
@@ -279,16 +279,16 @@ struct Stats {
 };
 
 template<typename T>
-void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName) {
+void removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName) {
   Stats stats;
   stats.begin();
   while(auto tmpTree = rewriter.transform(tree)) {
     if(test(tmpTree)) {
       tree = tmpTree;
-      rewriter.moveToSuccesor();
+      rewriter.moveStartToSuccesor();
       stats.successCount++;
     } else {
-      rewriter.moveToChildOrSuccesor();
+      rewriter.moveStartToChildOrSuccesor();
       stats.rollbackCount++;
     }
   }
