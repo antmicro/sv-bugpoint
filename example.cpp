@@ -13,6 +13,9 @@
 #include <sys/wait.h>
 #include <filesystem>
 
+using namespace slang::syntax;
+using namespace slang;
+
 enum RewriterState {
   SKIP_TO_START,
   REMOVAL_ALLOWED,
@@ -30,12 +33,12 @@ const std::string statsFilename = "bugpoint_stats";
 #define DERIVED static_cast<TDerived*>(this)
 
 template<typename TDerived>
-class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
+class OneTimeRewriter: public SyntaxRewriter<TDerived> {
   public:
-    slang::SourceRange startPoint;
-    slang::SourceRange removed;
-    slang::SourceRange removedChild;
-    slang::SourceRange removedSuccessor;
+    SourceRange startPoint;
+    SourceRange removed;
+    SourceRange removedChild;
+    SourceRange removedSuccessor;
 
     RewriterState state = REMOVAL_ALLOWED;
 
@@ -45,13 +48,13 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
             state = REMOVAL_ALLOWED;
         }
 
-        if(state == REGISTER_CHILD && t.sourceRange() != slang::SourceRange::NoLocation) {
+        if(state == REGISTER_CHILD && t.sourceRange() != SourceRange::NoLocation) {
           removedChild = t.sourceRange();
           state = WAIT_FOR_PARENT_EXIT;
           return;
         }
 
-        if(state == REGISTER_SUCCESSOR && t.sourceRange() != slang::SourceRange::NoLocation) {
+        if(state == REGISTER_SUCCESSOR && t.sourceRange() != SourceRange::NoLocation) {
           removedSuccessor = t.sourceRange();
           state = SKIP_TO_END;
           return;
@@ -87,7 +90,7 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
   }
 
   template<typename TParent, typename TChild>
-  void removeChildList(const TParent& parent, const slang::syntax::SyntaxList<TChild>& childList) {
+  void removeChildList(const TParent& parent, const SyntaxList<TChild>& childList) {
       if(state == REMOVAL_ALLOWED) {
         std::cerr << typeid(TParent).name() << "\n";
         for(auto item: childList) {
@@ -100,16 +103,16 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
       DERIVED->visitDefault(parent);
   }
 
-  std::shared_ptr<slang::syntax::SyntaxTree> transform(const std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
-      removed = slang::SourceRange::NoLocation;
-      removedChild = slang::SourceRange::NoLocation;
-      removedSuccessor = slang::SourceRange::NoLocation;
+  std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
+      removed = SourceRange::NoLocation;
+      removedChild = SourceRange::NoLocation;
+      removedSuccessor = SourceRange::NoLocation;
 
-      auto tree2 = slang::syntax::SyntaxRewriter<TDerived>::transform(tree);
+      auto tree2 = SyntaxRewriter<TDerived>::transform(tree);
 
       // I'm not sure about what intended behavior is, but head of SyntaxRewriter's allocator is nulled after traversal,
       // leading to NULL dereference when rewriter is reused. This is dirty work around this. TODO: examine it more carefully.
-      this->alloc = slang::BumpAllocator();
+      this->alloc = BumpAllocator();
 
       if(state != SKIP_TO_END) { // it means that we traversed whole thing
         return nullptr;
@@ -124,7 +127,7 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
   }
 
   void moveToChildOrSuccesor() {
-      if(removedChild != slang::SourceRange::NoLocation) {
+      if(removedChild != SourceRange::NoLocation) {
         startPoint = removedChild;
       } else {
         startPoint = removedSuccessor;
@@ -135,51 +138,51 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
 
 class GenforRemover: public OneTimeRewriter<GenforRemover> {
   public:
-  void handle(const slang::syntax::LoopGenerateSyntax& node) {
+  void handle(const LoopGenerateSyntax& node) {
     removeNode(node);
   }
 };
 
 class BodyRemover: public OneTimeRewriter<BodyRemover> {
   public:
-  void handle(const slang::syntax::FunctionDeclarationSyntax& node) {
+  void handle(const FunctionDeclarationSyntax& node) {
       removeChildList(node, node.items);
   }
 
-  void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
+  void handle(const ModuleDeclarationSyntax& node) {
       removeChildList(node, node.members);
   }
 };
 
 class DeclRemover: public OneTimeRewriter<DeclRemover> {
   public:
-  void handle(const slang::syntax::FunctionDeclarationSyntax& node) {
+  void handle(const FunctionDeclarationSyntax& node) {
       removeNode(node);
   }
 
-  void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
+  void handle(const ModuleDeclarationSyntax& node) {
       removeNode(node);
   }
 };
 
-// class AssertionPrinter: public slang::syntax::SyntaxVisitor<AssertionPrinter> {
+// class AssertionPrinter: public SyntaxVisitor<AssertionPrinter> {
 //   public:
-//   void handle(const slang::syntax::ActionBlockSyntax& node) {
+//   void handle(const ActionBlockSyntax& node) {
 //       std::cout << typeid(node).name() << "\n";
 //       std::cout << node.toString() << "\n";
 //       visitDefault(node);
 //   }
 // };
 
-// class ActionBlockPrinter: public slang::syntax::SyntaxVisitor<ActionBlockPrinter> {
+// class ActionBlockPrinter: public SyntaxVisitor<ActionBlockPrinter> {
 //   public:
-//   void handle(const slang::syntax::ActionBlockSyntax& node) {
+//   void handle(const ActionBlockSyntax& node) {
 //       std::cout << node.toString() << "\n";
 //       visitDefault(node);
 //   }
 // };
 
-// class AllPrinter: public slang::syntax::SyntaxVisitor<AllPrinter> {
+// class AllPrinter: public SyntaxVisitor<AllPrinter> {
 //   public:
 //   template<typename T>
 //   void handle(const T& node) {
@@ -189,10 +192,10 @@ class DeclRemover: public OneTimeRewriter<DeclRemover> {
 //   }
 // };
 
-bool test(std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
+bool test(std::shared_ptr<SyntaxTree>& tree) {
   std::ofstream file(tmpFilename);
   file.rdbuf()->pubsetbuf(0, 0);
-  file << slang::syntax::SyntaxPrinter::printFile(*tree);
+  file << SyntaxPrinter::printFile(*tree);
 
   pid_t pid = fork();
   if(pid == -1) {
@@ -276,7 +279,7 @@ struct Stats {
 };
 
 template<typename T>
-void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::SyntaxTree>& tree, std::string stageName) {
+void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName) {
   Stats stats;
   stats.begin();
   while(auto tmpTree = rewriter.transform(tree)) {
@@ -294,7 +297,7 @@ void removeLoop(OneTimeRewriter<T> rewriter, std::shared_ptr<slang::syntax::Synt
 }
 
 int main() {
-  auto treeOrErr = slang::syntax::SyntaxTree::fromFile(originalFilename);
+  auto treeOrErr = SyntaxTree::fromFile(originalFilename);
 
   std::filesystem::copy(originalFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
   std::filesystem::remove(statsFilename);
