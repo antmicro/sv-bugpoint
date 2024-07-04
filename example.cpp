@@ -15,7 +15,7 @@
 
 enum RewriterState {
   SKIP_TO_START,
-  HANDLE_ALLOWED,
+  REMOVAL_ALLOWED,
   REGISTER_CHILD,
   WAIT_FOR_PARENT_EXIT,
   REGISTER_SUCCESSOR,
@@ -37,12 +37,12 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
     slang::SourceRange removedChild;
     slang::SourceRange removedSuccessor;
 
-    RewriterState state = HANDLE_ALLOWED;
+    RewriterState state = REMOVAL_ALLOWED;
 
     template<typename T>
     void visit(T&& t) {
         if(state == SKIP_TO_START && t.sourceRange() == startPoint) {
-            state = HANDLE_ALLOWED;
+            state = REMOVAL_ALLOWED;
         }
 
         if(state == REGISTER_CHILD && t.sourceRange() != slang::SourceRange::NoLocation) {
@@ -63,8 +63,7 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
 
 
         if constexpr (requires { DERIVED->handle(t); }) {
-            if(state == HANDLE_ALLOWED) DERIVED->handle(t);
-            else DERIVED->visitDefault(t);
+            DERIVED->handle(t);
         }
         else {
             DERIVED->visitDefault(t);
@@ -73,6 +72,32 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
         if((state == REGISTER_CHILD || state == WAIT_FOR_PARENT_EXIT) && t.sourceRange() == removed) {
           state = REGISTER_SUCCESSOR;
         }
+  }
+
+  template<typename T>
+  void removeNode(const T& node) {
+      if(state == REMOVAL_ALLOWED) {
+        std::cerr << typeid(T).name() << "\n";
+        std::cerr << node.toString() << "\n";
+        DERIVED->remove(node);
+        removed = node.sourceRange();
+        state = REGISTER_CHILD;
+      }
+      DERIVED->visitDefault(node);
+  }
+
+  template<typename TParent, typename TChild>
+  void removeChildList(const TParent& parent, const slang::syntax::SyntaxList<TChild>& childList) {
+      if(state == REMOVAL_ALLOWED) {
+        std::cerr << typeid(TParent).name() << "\n";
+        for(auto item: childList) {
+          DERIVED->remove(*item);
+          std::cerr << item->toString();
+        }
+        removed = parent.sourceRange();
+        state = REGISTER_CHILD; // TODO: examine whether we register right child here
+      }
+      DERIVED->visitDefault(parent);
   }
 
   std::shared_ptr<slang::syntax::SyntaxTree> transform(const std::shared_ptr<slang::syntax::SyntaxTree>& tree) {
@@ -111,57 +136,29 @@ class OneTimeRewriter: public slang::syntax::SyntaxRewriter<TDerived> {
 class GenforRemover: public OneTimeRewriter<GenforRemover> {
   public:
   void handle(const slang::syntax::LoopGenerateSyntax& node) {
-      std::cerr << node.toString() << "\n";
-      remove(node);
-      removed = node.sourceRange();
-      state = REGISTER_CHILD;
-      visitDefault(node);
+    removeNode(node);
   }
 };
 
 class BodyRemover: public OneTimeRewriter<BodyRemover> {
   public:
   void handle(const slang::syntax::FunctionDeclarationSyntax& node) {
-      std::cerr << typeid(node).name() << "\n";
-      for(auto item: node.items) {
-        remove(*item);
-        std::cerr << item->toString();
-      }
-      removed = node.sourceRange();
-      state = REGISTER_CHILD; // TODO: examine whether we register right child here
-      visitDefault(node);
+      removeChildList(node, node.items);
   }
 
   void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
-      std::cerr << typeid(node).name() << "\n";
-      for(auto item: node.members) {
-        remove(*item);
-        std::cerr << item->toString();
-      }
-      removed = node.sourceRange();
-      state = REGISTER_CHILD; // TODO: examine whether we register right child here
-      visitDefault(node);
+      removeChildList(node, node.members);
   }
 };
 
 class DeclRemover: public OneTimeRewriter<DeclRemover> {
   public:
   void handle(const slang::syntax::FunctionDeclarationSyntax& node) {
-      std::cerr << typeid(node).name() << "\n";
-      std::cerr << node.toString() << "\n";
-      remove(node);
-      removed = node.sourceRange();
-      state = REGISTER_CHILD;
-      visitDefault(node);
+      removeNode(node);
   }
 
   void handle(const slang::syntax::ModuleDeclarationSyntax& node) {
-      std::cerr << typeid(node).name() << "\n";
-      std::cerr << node.toString() << "\n";
-      remove(node);
-      removed = node.sourceRange();
-      state = REGISTER_CHILD;
-      visitDefault(node);
+      removeNode(node);
   }
 };
 
