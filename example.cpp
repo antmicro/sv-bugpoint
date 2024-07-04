@@ -264,26 +264,26 @@ struct Stats {
     endTime = std::chrono::high_resolution_clock::now();
   }
 
-  std::string toStr(std::string stage)
+  std::string toStr(std::string pass, std::string stage)
   {
     std::stringstream tmp;
     int lines = linesBefore - linesAfter;
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime);
     int attempts = rollbacks + commits;
-    tmp << stage << '\t' << lines << '\t' << commits << '\t' << rollbacks << '\t' << attempts << '\t' << duration << '\n';
+    tmp << pass << '\t' << stage << '\t' << lines << '\t' << commits << '\t' << rollbacks << '\t' << attempts << '\t' << duration << '\n';
     return tmp.str();
   }
 
-  void report(std::string stage)
+  void report(std::string pass, std::string stage)
   {
-    std::cerr << toStr(stage);
+    std::cerr << toStr(pass, stage);
     std::ofstream file(statsFilename, std::ios_base::app);
-    file << toStr(stage);
+    file << toStr(pass, stage);
   }
 
   static void writeHeader() {
     std::ofstream file(statsFilename);
-    file << "stage\tlines_removed\tcommits\trollbacks\tattempts\ttime\n";
+    file << "pass\tstage\tlines_removed\tcommits\trollbacks\tattempts\ttime\n";
   }
 
   void addAttempts(Stats rhs) {
@@ -293,7 +293,7 @@ struct Stats {
 };
 
 template<typename T>
-Stats removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName) {
+Stats removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx) {
   Stats stats;
   stats.begin();
   while(auto tmpTree = rewriter.transform(tree)) {
@@ -307,7 +307,24 @@ Stats removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, 
     }
   }
   stats.end();
-  stats.report(stageName);
+  stats.report(passIdx, stageName);
+  return stats;
+}
+
+// Stats removeLoop2(std::shared_ptr<SyntaxTree>& tree) {
+// }
+
+Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx="-") {
+  Stats stats;
+  stats.begin();
+
+  stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover", passIdx));
+  stats.addAttempts(removeLoop(GenforRemover(), tree, "genforRemover", passIdx));
+  stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover", passIdx));
+
+  stats.end();
+  stats.report(passIdx, "*");
+
   return stats;
 }
 
@@ -321,13 +338,15 @@ int main() {
 
       Stats stats;
       stats.begin();
+      int i = 1;
+      for(Stats substats = pass(tree, std::to_string(i++)); substats.linesAfter < substats.linesBefore; substats = pass(tree, std::to_string(i++)))
+      {
+        stats.addAttempts(substats);
+      }
+      stats.end();
+      stats.report("*","*");
       // AllPrinter printer;
       // printer.visit(tree->root());
-      stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover"));
-      stats.addAttempts(removeLoop(GenforRemover(), tree, "genforRemover"));
-      stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover"));
-      stats.end();
-      stats.report("*");
   }
   else {
       /* do something with result.error() */
