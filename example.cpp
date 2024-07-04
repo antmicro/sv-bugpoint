@@ -92,7 +92,7 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
 
   template<typename TParent, typename TChild>
   void removeChildList(const TParent& parent, const SyntaxList<TChild>& childList) {
-      if(state == REMOVAL_ALLOWED) {
+      if(state == REMOVAL_ALLOWED && childList.getChildCount()) {
         std::cerr << typeid(TParent).name() << "\n";
         for(auto item: childList) {
           DERIVED->remove(*item);
