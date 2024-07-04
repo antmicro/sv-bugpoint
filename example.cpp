@@ -16,15 +16,6 @@
 using namespace slang::syntax;
 using namespace slang;
 
-enum RewriterState {
-  SKIP_TO_START,
-  REMOVAL_ALLOWED,
-  REGISTER_CHILD,
-  WAIT_FOR_PARENT_EXIT,
-  REGISTER_SUCCESSOR,
-  SKIP_TO_END,
-};
-
 const std::string originalFilename = "uvm.sv";
 const std::string outputFilename = "uvm_minimized.sv";
 const std::string tmpFilename = "uvm_test.sv";
@@ -35,12 +26,21 @@ const std::string statsFilename = "bugpoint_stats";
 template<typename TDerived>
 class OneTimeRewriter: public SyntaxRewriter<TDerived> {
   public:
+    enum State {
+      SKIP_TO_START,
+      REMOVAL_ALLOWED,
+      REGISTER_CHILD,
+      WAIT_FOR_PARENT_EXIT,
+      REGISTER_SUCCESSOR,
+      SKIP_TO_END,
+    };
+
     SourceRange startPoint;
     SourceRange removed;
     SourceRange removedChild;
     SourceRange removedSuccessor;
 
-    RewriterState state = REMOVAL_ALLOWED;
+    State state = REMOVAL_ALLOWED;
 
     template<typename T>
     void visit(T&& t) {
