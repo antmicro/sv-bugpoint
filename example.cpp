@@ -285,12 +285,15 @@ struct Stats {
     std::ofstream file(statsFilename);
     file << "stage\tlines_removed\tcommits\trollbacks\tattempts\ttime\n";
   }
-  // TODO:
-  // accumulate(Stats rhs) // extend previous stat with sub-stat
+
+  void addAttempts(Stats rhs) {
+    commits += rhs.commits;
+    rollbacks += rhs.rollbacks;
+  }
 };
 
 template<typename T>
-void removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName) {
+Stats removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName) {
   Stats stats;
   stats.begin();
   while(auto tmpTree = rewriter.transform(tree)) {
@@ -305,6 +308,7 @@ void removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, s
   }
   stats.end();
   stats.report(stageName);
+  return stats;
 }
 
 int main() {
@@ -314,11 +318,16 @@ int main() {
 
   if (treeOrErr) {
       auto tree = *treeOrErr;
+
+      Stats stats;
+      stats.begin();
       // AllPrinter printer;
       // printer.visit(tree->root());
-      removeLoop(BodyRemover(), tree, "bodyRemover");
-      removeLoop(GenforRemover(), tree, "genforRemover");
-      removeLoop(DeclRemover(), tree, "declRemover");
+      stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover"));
+      stats.addAttempts(removeLoop(GenforRemover(), tree, "genforRemover"));
+      stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover"));
+      stats.end();
+      stats.report("*");
   }
   else {
       /* do something with result.error() */
