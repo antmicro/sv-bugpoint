@@ -315,8 +315,8 @@ int main() {
       auto tree = *treeOrErr;
       // AllPrinter printer;
       // printer.visit(tree->root());
-      removeLoop(GenforRemover(), tree, "genforRemover");
       removeLoop(BodyRemover(), tree, "bodyRemover");
+      removeLoop(GenforRemover(), tree, "genforRemover");
       removeLoop(DeclRemover(), tree, "declRemover");
   }
   else {
