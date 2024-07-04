@@ -25,6 +25,7 @@ const std::string statsFilename = "bugpoint_stats";
 
 template<typename TDerived>
 class OneTimeRemover: public SyntaxRewriter<TDerived> {
+  // Incremental node remover - each transform() yields one removal at most
   public:
     enum State {
       SKIP_TO_START,
@@ -104,6 +105,7 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
   }
 
   std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
+      // Apply one removal. If removals no longer possible return NULL
       removed = SourceRange::NoLocation;
       removedChild = SourceRange::NoLocation;
       removedSuccessor = SourceRange::NoLocation;
@@ -122,11 +124,15 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
   }
 
   void moveStartToSuccesor() {
+      // Start next transform from succesor of removed node.
+      // Meant be run when you decided to commit removal (i.e you pass just transformed tree for next transform)
       startPoint = removedSuccessor;
       state = SKIP_TO_START;
   }
 
   void moveStartToChildOrSuccesor() {
+      // Start next transform from child of removed node if possible, otherwise, from its succesor.
+      // Meant to be run when you decided to rollback removal (i.e. you discard just transformed tree)
       if(removedChild != SourceRange::NoLocation) {
         startPoint = removedChild;
       } else {
@@ -193,6 +199,9 @@ class DeclRemover: public OneTimeRemover<DeclRemover> {
 // };
 
 bool test(std::shared_ptr<SyntaxTree>& tree) {
+  // Write given tree to tmp file and execute ./test.sh tmpFile.
+  // On success (zero exit code) replace minimized file with tmp, and return true.
+  // On fail (non-zero exit code) return false.
   std::ofstream file(tmpFilename);
   file.rdbuf()->pubsetbuf(0, 0);
   file << SyntaxPrinter::printFile(*tree);
