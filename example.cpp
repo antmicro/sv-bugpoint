@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <filesystem>
+#include "debug.hpp"
 
 using namespace slang::syntax;
 using namespace slang;
@@ -177,33 +178,6 @@ class DeclRemover: public OneTimeRemover<DeclRemover> {
       removeNode(node);
   }
 };
-
-// class AssertionPrinter: public SyntaxVisitor<AssertionPrinter> {
-//   public:
-//   void handle(const ActionBlockSyntax& node) {
-//       std::cout << typeid(node).name() << "\n";
-//       std::cout << node.toString() << "\n";
-//       visitDefault(node);
-//   }
-// };
-
-// class ActionBlockPrinter: public SyntaxVisitor<ActionBlockPrinter> {
-//   public:
-//   void handle(const ActionBlockSyntax& node) {
-//       std::cout << node.toString() << "\n";
-//       visitDefault(node);
-//   }
-// };
-
-// class AllPrinter: public SyntaxVisitor<AllPrinter> {
-//   public:
-//   template<typename T>
-//   void handle(const T& node) {
-//       std::cout << typeid(node).name() << "\n";
-//       std::cout << node.toString() << "\n";
-//       visitDefault(node);
-//   }
-// };
 
 bool test(std::shared_ptr<SyntaxTree>& tree) {
   // Write given tree to tmp file and execute ./test.sh tmpFile.
