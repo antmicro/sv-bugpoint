@@ -142,9 +142,12 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
   }
 };
 
-class GenforRemover: public OneTimeRemover<GenforRemover> {
+class BodyPartsRemover: public OneTimeRemover<BodyPartsRemover> {
   public:
   void handle(const LoopGenerateSyntax& node) {
+    removeNode(node);
+  }
+  void handle(const ConcurrentAssertionMemberSyntax& node) {
     removeNode(node);
   }
 };
@@ -167,6 +170,10 @@ class DeclRemover: public OneTimeRemover<DeclRemover> {
   }
 
   void handle(const ModuleDeclarationSyntax& node) {
+      removeNode(node);
+  }
+
+  void handle(const TypedefDeclarationSyntax& node) {
       removeNode(node);
   }
 };
@@ -319,7 +326,7 @@ Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx="-") {
   stats.begin();
 
   stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover", passIdx));
-  stats.addAttempts(removeLoop(GenforRemover(), tree, "genforRemover", passIdx));
+  stats.addAttempts(removeLoop(BodyPartsRemover(), tree, "bodyPartsRemover", passIdx));
   stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover", passIdx));
 
   stats.end();
