@@ -179,6 +179,48 @@ class DeclRemover: public OneTimeRemover<DeclRemover> {
   }
 };
 
+class StatementsRemover: public OneTimeRemover<StatementsRemover> {
+  public:
+  void handle(const ProceduralBlockSyntax& node) {
+      removeNode(node);
+  }
+  void handle(const CaseStatementSyntax& node) {
+      removeNode(node);
+  }
+  void handle(const LoopStatementSyntax& node) {
+      removeNode(node);
+  }
+};
+
+class ImportsRemover: public OneTimeRemover<ImportsRemover> {
+  public:
+  void handle(const PackageImportDeclarationSyntax& node) {
+    removeNode(node);
+  }
+  // void handle(const ModuleHeaderSyntax& node) {
+  //     removeChildList(node, node.imports);
+  // }
+};
+
+class ParamDeclRemover: public OneTimeRemover<ParamDeclRemover> {
+  public:
+  void handle(const ParameterDeclarationStatementSyntax& node) {
+      removeNode(node);
+  }
+};
+
+class ModportRemover: public OneTimeRemover<ModportRemover> {
+  public:
+  void handle(const ModportDeclarationSyntax& node) {
+      removeNode(node);
+  }
+};
+class InstantationRemover: public OneTimeRemover<InstantationRemover> {
+  public:
+  void handle(const HierarchyInstantiationSyntax& node) {
+      removeNode(node);
+  }
+};
 bool test(std::shared_ptr<SyntaxTree>& tree) {
   // Write given tree to tmp file and execute ./test.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
@@ -299,9 +341,14 @@ Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx="-") {
   Stats stats;
   stats.begin();
 
+  stats.addAttempts(removeLoop(InstantationRemover(), tree, "instantationRemover", passIdx));
   stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover", passIdx));
   stats.addAttempts(removeLoop(BodyPartsRemover(), tree, "bodyPartsRemover", passIdx));
   stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover", passIdx));
+  stats.addAttempts(removeLoop(StatementsRemover(), tree, "statementsRemover", passIdx));
+  stats.addAttempts(removeLoop(ImportsRemover(), tree, "importsRemover", passIdx));
+  stats.addAttempts(removeLoop(ParamDeclRemover(), tree, "paramDeclRemover", passIdx));
+  stats.addAttempts(removeLoop(ModportRemover(), tree, "modportRemover", passIdx));
 
   stats.end();
   stats.report(passIdx, "*");
