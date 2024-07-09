@@ -366,7 +366,18 @@ Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx="-") {
   return stats;
 }
 
-int main() {
+void inspect() {
+  auto treeOrErr = SyntaxTree::fromFile("uvm.sv");
+  if (treeOrErr) {
+      auto tree = *treeOrErr;
+      AllPrinter printer(2);
+      printer.visit(tree->root());
+  } else {
+      /* do something with result.error() */
+  }
+}
+
+void minimize() {
   auto treeOrErr = SyntaxTree::fromFile(originalFilename);
   std::filesystem::copy(originalFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
   Stats::writeHeader();
@@ -383,10 +394,13 @@ int main() {
       }
       stats.end();
       stats.report("*","*");
-      // AllPrinter printer;
-      // printer.visit(tree->root());
   }
   else {
       /* do something with result.error() */
   }
+}
+
+int main() {
+  // inspect();
+  minimize();
 }
