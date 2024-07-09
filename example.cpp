@@ -211,12 +211,55 @@ class ImportsRemover: public OneTimeRemover<ImportsRemover> {
   // }
 };
 
-class ParamDeclRemover: public OneTimeRemover<ParamDeclRemover> {
+class MemberRemover: public OneTimeRemover<MemberRemover> {
   public:
+  bool inEnum = false;
+
+  void handle(const DataDeclarationSyntax& node) {
+      removeNode(node);
+  }
+
+  void handle(const StructUnionMemberSyntax& node) {
+      removeNode(node);
+  }
+
+  void handle(const EnumTypeSyntax& node) {
+      inEnum = true;
+      visitDefault(node);
+      inEnum = false;
+  }
+
+  void handle(const DeclaratorSyntax& node) { // a.o. enum fields
+      // DeclaratorSyntax is often wrapped in not_null
+      // as temporary hack we only remove it from enum, when we know that it is not a case
+      if(inEnum) {
+        removeNode(node);
+      }
+  }
+
   void handle(const ParameterDeclarationStatementSyntax& node) {
       removeNode(node);
   }
+
+  void handle(const ParameterDeclarationBaseSyntax& node) {
+      removeNode(node);
+  }
 };
+
+class ParamAssignRemover: public OneTimeRemover<ParamAssignRemover> {
+  public:
+  void handle(const ParameterValueAssignmentSyntax& node) {
+      removeNode(node);
+  }
+};
+
+class ContAssignRemover: public OneTimeRemover<ContAssignRemover> {
+  public:
+  void handle(const ContinuousAssignSyntax& node) {
+      removeNode(node);
+  }
+};
+
 
 class ModportRemover: public OneTimeRemover<ModportRemover> {
   public:
@@ -358,13 +401,15 @@ Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx="-") {
   Stats stats;
   stats.begin();
 
-  stats.addAttempts(removeLoop(InstantationRemover(), tree, "instantationRemover", passIdx));
   stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover", passIdx));
+  stats.addAttempts(removeLoop(InstantationRemover(), tree, "instantationRemover", passIdx));
   stats.addAttempts(removeLoop(BodyPartsRemover(), tree, "bodyPartsRemover", passIdx));
   stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover", passIdx));
   stats.addAttempts(removeLoop(StatementsRemover(), tree, "statementsRemover", passIdx));
   stats.addAttempts(removeLoop(ImportsRemover(), tree, "importsRemover", passIdx));
-  stats.addAttempts(removeLoop(ParamDeclRemover(), tree, "paramDeclRemover", passIdx));
+  stats.addAttempts(removeLoop(ParamAssignRemover(), tree, "paramAssignRemover", passIdx));
+  stats.addAttempts(removeLoop(ContAssignRemover(), tree, "contAssignRemover", passIdx));
+  stats.addAttempts(removeLoop(MemberRemover(), tree, "memberRemover", passIdx));
   stats.addAttempts(removeLoop(ModportRemover(), tree, "modportRemover", passIdx));
 
   stats.end();
