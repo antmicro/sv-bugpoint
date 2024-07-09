@@ -225,8 +225,9 @@ bool test(std::shared_ptr<SyntaxTree>& tree) {
   // Write given tree to tmp file and execute ./test.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
   // On fail (non-zero exit code) return false.
-  std::ofstream file(tmpFilename);
-  file.rdbuf()->pubsetbuf(0, 0);
+  std::ofstream file;
+  file.rdbuf()->pubsetbuf(0, 0); // Enable unbuffered io. Has to be called before open to be effective
+  file.open(tmpFilename);
   file << SyntaxPrinter::printFile(*tree);
 
   pid_t pid = fork();
