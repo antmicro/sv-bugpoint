@@ -230,14 +230,12 @@ class InstantationRemover: public OneTimeRemover<InstantationRemover> {
       removeNode(node);
   }
 };
-bool test(std::shared_ptr<SyntaxTree>& tree) {
-  // Write given tree to tmp file and execute ./test.sh tmpFile.
+
+
+bool test() {
+  // Execute ./test.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
   // On fail (non-zero exit code) return false.
-  std::ofstream file;
-  file.rdbuf()->pubsetbuf(0, 0); // Enable unbuffered io. Has to be called before open to be effective
-  file.open(tmpFilename);
-  file << SyntaxPrinter::printFile(*tree);
 
   pid_t pid = fork();
   if(pid == -1) {
@@ -268,6 +266,15 @@ bool test(std::shared_ptr<SyntaxTree>& tree) {
   }
 
   return false; // just to make compiler happy - will never get here
+}
+
+bool test(std::shared_ptr<SyntaxTree>& tree) {
+  // Write given tree to tmp file and execute ./test.sh tmpFile.
+  std::ofstream tmpFile;
+  tmpFile.rdbuf()->pubsetbuf(0, 0); // Enable unbuffered io. Has to be called before open to be effective
+  tmpFile.open(tmpFilename);
+  tmpFile << SyntaxPrinter::printFile(*tree);
+  return test();
 }
 
 int countLines(std::string filename) {
@@ -377,9 +384,22 @@ void inspect() {
   }
 }
 
+void removeVerilatorConfig() {
+  std::ifstream inputFile(originalFilename);
+  std::ofstream testFile(tmpFilename);
+  std::string line;
+  while(std::getline(inputFile, line) && line != "`verilator_config") {
+    testFile << line << "\n";
+  }
+  testFile << std::flush;
+  test();
+}
+
 void minimize() {
-  auto treeOrErr = SyntaxTree::fromFile(originalFilename);
   std::filesystem::copy(originalFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
+  removeVerilatorConfig();
+
+  auto treeOrErr = SyntaxTree::fromFile(outputFilename);
   Stats::writeHeader();
 
   if (treeOrErr) {
