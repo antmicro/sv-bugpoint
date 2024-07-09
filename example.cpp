@@ -387,11 +387,14 @@ void minimize() {
 
       Stats stats;
       stats.begin();
+
       int i = 1;
-      for(Stats substats = pass(tree, std::to_string(i++)); substats.linesAfter < substats.linesBefore; substats = pass(tree, std::to_string(i++)))
-      {
+      Stats substats;
+      do {
+        substats = pass(tree, std::to_string(i++));
         stats.addAttempts(substats);
-      }
+      } while(substats.linesAfter < substats.linesBefore);
+
       stats.end();
       stats.report("*","*");
   }
