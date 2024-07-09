@@ -88,7 +88,6 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
         removed = node.sourceRange();
         state = REGISTER_CHILD;
       }
-      DERIVED->visitDefault(node);
   }
 
   template<typename TParent, typename TChild>
@@ -102,7 +101,6 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
         removed = parent.sourceRange();
         state = REGISTER_CHILD; // TODO: examine whether we register right child here
       }
-      DERIVED->visitDefault(parent);
   }
 
   std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
@@ -147,9 +145,11 @@ class BodyPartsRemover: public OneTimeRemover<BodyPartsRemover> {
   public:
   void handle(const LoopGenerateSyntax& node) {
     removeNode(node);
+    visitDefault(node);
   }
   void handle(const ConcurrentAssertionMemberSyntax& node) {
     removeNode(node);
+    visitDefault(node);
   }
 };
 
@@ -157,10 +157,12 @@ class BodyRemover: public OneTimeRemover<BodyRemover> {
   public:
   void handle(const FunctionDeclarationSyntax& node) {
       removeChildList(node, node.items);
+      visitDefault(node);
   }
 
   void handle(const ModuleDeclarationSyntax& node) {
       removeChildList(node, node.members);
+      visitDefault(node);
   }
 };
 
@@ -168,14 +170,17 @@ class DeclRemover: public OneTimeRemover<DeclRemover> {
   public:
   void handle(const FunctionDeclarationSyntax& node) {
       removeNode(node);
+      visitDefault(node);
   }
 
   void handle(const ModuleDeclarationSyntax& node) {
       removeNode(node);
+      visitDefault(node);
   }
 
   void handle(const TypedefDeclarationSyntax& node) {
       removeNode(node);
+      visitDefault(node);
   }
 };
 
@@ -183,12 +188,15 @@ class StatementsRemover: public OneTimeRemover<StatementsRemover> {
   public:
   void handle(const ProceduralBlockSyntax& node) {
       removeNode(node);
+      visitDefault(node);
   }
   void handle(const CaseStatementSyntax& node) {
       removeNode(node);
+      visitDefault(node);
   }
   void handle(const LoopStatementSyntax& node) {
       removeNode(node);
+      visitDefault(node);
   }
 };
 
@@ -196,6 +204,7 @@ class ImportsRemover: public OneTimeRemover<ImportsRemover> {
   public:
   void handle(const PackageImportDeclarationSyntax& node) {
     removeNode(node);
+    visitDefault(node);
   }
   // void handle(const ModuleHeaderSyntax& node) {
   //     removeChildList(node, node.imports);
