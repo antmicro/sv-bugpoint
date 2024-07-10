@@ -226,7 +226,6 @@ class ImportsRemover: public OneTimeRemover<ImportsRemover> {
 
 class MemberRemover: public OneTimeRemover<MemberRemover> {
   public:
-  bool inEnum = false;
 
   void handle(const DataDeclarationSyntax& node) {
       removeNode(node);
@@ -236,18 +235,9 @@ class MemberRemover: public OneTimeRemover<MemberRemover> {
       removeNode(node);
   }
 
-  void handle(const EnumTypeSyntax& node) {
-      inEnum = true;
-      visitDefault(node);
-      inEnum = false;
-  }
 
   void handle(const DeclaratorSyntax& node) { // a.o. enum fields
-      // DeclaratorSyntax is often wrapped in not_null
-      // as temporary hack we only remove it from enum, when we know that it is not a case
-      if(inEnum) {
-        removeNode(node);
-      }
+      removeNode(node);
   }
 
   void handle(const ParameterDeclarationStatementSyntax& node) {
