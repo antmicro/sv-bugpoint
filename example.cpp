@@ -103,8 +103,9 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
       }
   }
 
-  std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
-      // Apply one removal. If removals no longer possible return NULL
+  std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree, bool& traversalDone) {
+      // Apply one removal, and return changed tree.
+      // traversalDone is set when subsequent calls to transform would not make sense
       removed = SourceRange::NoLocation;
       removedChild = SourceRange::NoLocation;
       removedSuccessor = SourceRange::NoLocation;
@@ -115,11 +116,11 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
       // leading to NULL dereference when rewriter is reused. This is dirty work around this. TODO: examine it more carefully.
       this->alloc = BumpAllocator();
 
-      if(state != SKIP_TO_END) { // it means that we traversed whole thing
-        return nullptr;
-      } else {
-        return tree2;
+      if(removedChild == SourceRange::NoLocation && removedSuccessor == SourceRange::NoLocation) {
+        traversalDone = true;
       }
+
+      return tree2;
   }
 
   void moveStartToSuccesor() {
@@ -379,7 +380,9 @@ template<typename T>
 Stats removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx) {
   Stats stats;
   stats.begin();
-  while(auto tmpTree = rewriter.transform(tree)) {
+  bool done = false;
+  while(!done) {
+    auto tmpTree = rewriter.transform(tree, done);
     if(test(tmpTree)) {
       tree = tmpTree;
       rewriter.moveStartToSuccesor();
