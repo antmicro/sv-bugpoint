@@ -44,8 +44,19 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
 
     State state = REMOVAL_ALLOWED;
 
+    /// The default handler invoked when no visit() method is overridden for a particular type.
+    /// Will visit all child nodes by default.
     template<typename T>
-    void visit(T&& node) {
+    void visitDefault(T&& node) {
+        for (uint32_t i = 0; i < node.getChildCount(); i++) {
+            auto child = node.childNode(i);
+            if (child)
+                child->visit(*DERIVED, !node.isChildNotNullable(i));
+        }
+    }
+
+    template<typename T>
+    void visit(T&& node, bool removable) {
         if(state == SKIP_TO_START && node.sourceRange() == startPoint) {
             state = REMOVAL_ALLOWED;
         }
@@ -68,7 +79,8 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
 
 
         if constexpr (requires { DERIVED->handle(node); }) {
-            DERIVED->handle(node);
+            if(removable) DERIVED->handle(node);
+            else DERIVED->visitDefault(node);
         }
         else {
             DERIVED->visitDefault(node);
