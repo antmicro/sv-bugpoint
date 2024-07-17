@@ -435,7 +435,9 @@ void inspect() {
   }
 }
 
-void removeVerilatorConfig() {
+Stats removeVerilatorConfig() {
+  Stats stats;
+  stats.begin();
   std::ifstream inputFile(originalFilename);
   std::ofstream testFile(tmpFilename);
   std::string line;
@@ -443,21 +445,27 @@ void removeVerilatorConfig() {
     testFile << line << "\n";
   }
   testFile << std::flush;
-  test();
+  if(test()) {
+    stats.commits++;
+  } else {
+    stats.rollbacks++;
+  }
+  stats.end();
+  stats.report("-", "verilatorConfigRemover");
+  return stats;
 }
 
 void minimize() {
   std::filesystem::copy(originalFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
-  removeVerilatorConfig();
+  Stats::writeHeader();
+  Stats stats;
+  stats.begin();
+  stats.addAttempts(removeVerilatorConfig());
 
   auto treeOrErr = SyntaxTree::fromFile(outputFilename);
-  Stats::writeHeader();
 
   if (treeOrErr) {
       auto tree = *treeOrErr;
-
-      Stats stats;
-      stats.begin();
 
       int i = 1;
       Stats substats;
@@ -466,12 +474,12 @@ void minimize() {
         stats.addAttempts(substats);
       } while(substats.linesAfter < substats.linesBefore);
 
-      stats.end();
-      stats.report("*","*");
   }
   else {
       /* do something with result.error() */
   }
+  stats.end();
+  stats.report("*","*");
 }
 
 int main() {
