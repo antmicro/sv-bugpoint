@@ -56,7 +56,7 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
     }
 
     template<typename T>
-    void visit(T&& node, bool removable) {
+    void visit(T&& node, bool isNodeRemovable=true) {
         if(state == SKIP_TO_START && node.sourceRange() == startPoint) {
             state = REMOVAL_ALLOWED;
         }
@@ -78,9 +78,8 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
         }
 
 
-        if constexpr (requires { DERIVED->handle(node); }) {
-            if(removable) DERIVED->handle(node);
-            else DERIVED->visitDefault(node);
+        if constexpr (requires { DERIVED->handle(node, isNodeRemovable); }) {
+            DERIVED->handle(node, isNodeRemovable);
         }
         else {
             DERIVED->visitDefault(node);
@@ -92,8 +91,8 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
   }
 
   template<typename T>
-  void removeNode(const T& node) {
-      if(state == REMOVAL_ALLOWED) {
+  void removeNode(const T& node, bool isNodeRemovable) {
+      if(state == REMOVAL_ALLOWED && isNodeRemovable) {
         std::cerr << typeid(T).name() << "\n";
         std::cerr << node.toString() << "\n";
         DERIVED->remove(node);
@@ -157,24 +156,24 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
 
 class BodyPartsRemover: public OneTimeRemover<BodyPartsRemover> {
   public:
-  void handle(const LoopGenerateSyntax& node) {
-    removeNode(node);
+  void handle(const LoopGenerateSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
-  void handle(const ConcurrentAssertionMemberSyntax& node) {
-    removeNode(node);
+  void handle(const ConcurrentAssertionMemberSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
 };
 
 class BodyRemover: public OneTimeRemover<BodyRemover> {
   public:
-  void handle(const FunctionDeclarationSyntax& node) {
+  void handle(const FunctionDeclarationSyntax& node, bool isNodeRemovable) {
       removeChildList(node, node.items);
       visitDefault(node);
   }
 
-  void handle(const ModuleDeclarationSyntax& node) {
+  void handle(const ModuleDeclarationSyntax& node, bool isNodeRemovable) {
       removeChildList(node, node.members);
       visitDefault(node);
   }
@@ -182,45 +181,45 @@ class BodyRemover: public OneTimeRemover<BodyRemover> {
 
 class DeclRemover: public OneTimeRemover<DeclRemover> {
   public:
-  void handle(const FunctionDeclarationSyntax& node) {
-      removeNode(node);
+  void handle(const FunctionDeclarationSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
 
-  void handle(const ModuleDeclarationSyntax& node) {
-      removeNode(node);
+  void handle(const ModuleDeclarationSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
 
-  void handle(const TypedefDeclarationSyntax& node) {
-      removeNode(node);
+  void handle(const TypedefDeclarationSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
 };
 
 class StatementsRemover: public OneTimeRemover<StatementsRemover> {
   public:
-  void handle(const ProceduralBlockSyntax& node) {
-      removeNode(node);
+  void handle(const ProceduralBlockSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
-  void handle(const CaseStatementSyntax& node) {
-      removeNode(node);
+  void handle(const CaseStatementSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
-  void handle(const LoopStatementSyntax& node) {
-      removeNode(node);
+  void handle(const LoopStatementSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
 };
 
 class ImportsRemover: public OneTimeRemover<ImportsRemover> {
   public:
-  void handle(const PackageImportDeclarationSyntax& node) {
-    removeNode(node);
+  void handle(const PackageImportDeclarationSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
-  // void handle(const ModuleHeaderSyntax& node) {
+  // void handle(const ModuleHeaderSyntax& node, bool isNodeRemovable) {
   //     removeChildList(node, node.imports);
   // }
 };
@@ -228,53 +227,53 @@ class ImportsRemover: public OneTimeRemover<ImportsRemover> {
 class MemberRemover: public OneTimeRemover<MemberRemover> {
   public:
 
-  void handle(const DataDeclarationSyntax& node) {
-      removeNode(node);
+  void handle(const DataDeclarationSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 
-  void handle(const StructUnionMemberSyntax& node) {
-      removeNode(node);
+  void handle(const StructUnionMemberSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 
 
-  void handle(const DeclaratorSyntax& node) { // a.o. enum fields
-      removeNode(node);
+  void handle(const DeclaratorSyntax& node, bool isNodeRemovable) { // a.o. enum fields
+      removeNode(node, isNodeRemovable);
   }
 
-  void handle(const ParameterDeclarationStatementSyntax& node) {
-      removeNode(node);
+  void handle(const ParameterDeclarationStatementSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 
-  void handle(const ParameterDeclarationBaseSyntax& node) {
-      removeNode(node);
+  void handle(const ParameterDeclarationBaseSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 };
 
 class ParamAssignRemover: public OneTimeRemover<ParamAssignRemover> {
   public:
-  void handle(const ParameterValueAssignmentSyntax& node) {
-      removeNode(node);
+  void handle(const ParameterValueAssignmentSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 };
 
 class ContAssignRemover: public OneTimeRemover<ContAssignRemover> {
   public:
-  void handle(const ContinuousAssignSyntax& node) {
-      removeNode(node);
+  void handle(const ContinuousAssignSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 };
 
 
 class ModportRemover: public OneTimeRemover<ModportRemover> {
   public:
-  void handle(const ModportDeclarationSyntax& node) {
-      removeNode(node);
+  void handle(const ModportDeclarationSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 };
 class InstantationRemover: public OneTimeRemover<InstantationRemover> {
   public:
-  void handle(const HierarchyInstantiationSyntax& node) {
-      removeNode(node);
+  void handle(const HierarchyInstantiationSyntax& node, bool isNodeRemovable) {
+      removeNode(node, isNodeRemovable);
   }
 };
 
