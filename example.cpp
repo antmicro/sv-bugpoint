@@ -51,7 +51,7 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (child)
-                child->visit(*DERIVED, !node.isChildNotNullable(i));
+                child->visit(*DERIVED, node.isChildOptional(i));
         }
     }
 
