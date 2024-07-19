@@ -122,6 +122,7 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
       removedChild = SourceRange::NoLocation;
       removedSuccessor = SourceRange::NoLocation;
 
+      SyntaxRewriter<TDerived>::setHoldParentPtr(false);
       auto tree2 = SyntaxRewriter<TDerived>::transform(tree);
 
       // I'm not sure about what intended behavior is, but head of SyntaxRewriter's allocator is nulled after traversal,
