@@ -203,11 +203,7 @@ class StatementsRemover: public OneTimeRemover<StatementsRemover> {
       removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
-  void handle(const CaseStatementSyntax& node, bool isNodeRemovable) {
-      removeNode(node, isNodeRemovable);
-      visitDefault(node);
-  }
-  void handle(const LoopStatementSyntax& node, bool isNodeRemovable) {
+  void handle(const StatementSyntax& node, bool isNodeRemovable) {
       removeNode(node, isNodeRemovable);
       visitDefault(node);
   }
