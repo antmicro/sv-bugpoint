@@ -44,6 +44,11 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
 
     State state = REMOVAL_ALLOWED;
 
+    // As an optimization we do removal in quasi-sorted way:
+    // first remove nodes at least 1024 lines long, then 512, and so on
+    unsigned linesUpperLimit = INT_MAX;
+    unsigned linesLowerLimit = 1024;
+
     /// The default handler invoked when no visit() method is overridden for a particular type.
     /// Will visit all child nodes by default.
     template<typename T>
@@ -91,8 +96,20 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
   }
 
   template<typename T>
+  bool shouldRemove(const T& node, bool isNodeRemovable) {
+    unsigned len = std::ranges::count(node.toString(), '\n') + 1;
+    return state == REMOVAL_ALLOWED && isNodeRemovable && len >= linesLowerLimit && len < linesUpperLimit;
+  }
+
+  template<typename T>
+  bool shouldRemove(const SyntaxList<T>& list) {
+    unsigned len = std::ranges::count(list.toString(), '\n') + 1;
+    return state == REMOVAL_ALLOWED && list.getChildCount() && len >= linesLowerLimit && len < linesUpperLimit;
+  }
+
+  template<typename T>
   void removeNode(const T& node, bool isNodeRemovable) {
-      if(state == REMOVAL_ALLOWED && isNodeRemovable) {
+      if(shouldRemove(node, isNodeRemovable)) {
         std::cerr << typeid(T).name() << "\n";
         std::cerr << node.toString() << "\n";
         DERIVED->remove(node);
@@ -103,7 +120,7 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
 
   template<typename TParent, typename TChild>
   void removeChildList(const TParent& parent, const SyntaxList<TChild>& childList) {
-      if(state == REMOVAL_ALLOWED && childList.getChildCount()) {
+      if(shouldRemove(childList)) {
         std::cerr << typeid(TParent).name() << "\n";
         for(auto item: childList) {
           DERIVED->remove(*item);
@@ -125,7 +142,15 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
       auto tree2 = SyntaxRewriter<TDerived>::transform(tree);
 
       if(removedChild == SourceRange::NoLocation && removedSuccessor == SourceRange::NoLocation) {
-        traversalDone = true;
+        // we have ran out of nodes of searched size - advance limit
+        linesUpperLimit = linesLowerLimit;
+        linesLowerLimit /= 2;
+        if(linesUpperLimit == 1) { // tried all possible sizes - finish
+          traversalDone = true;
+        } else if(removed == SourceRange::NoLocation) {
+          // no node removed - retry with new limit
+          tree2 = transform(tree, traversalDone);
+        }
       }
 
       return tree2;
@@ -356,7 +381,7 @@ struct Stats {
   {
     std::cerr << toStr(pass, stage);
     std::ofstream file(statsFilename, std::ios_base::app);
-    file << toStr(pass, stage);
+    file << toStr(pass, stage) << std::flush;
   }
 
   static void writeHeader() {
@@ -374,9 +399,12 @@ template<typename T>
 Stats removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx) {
   Stats stats;
   stats.begin();
-  bool done = false;
-  while(!done) {
-    auto tmpTree = rewriter.transform(tree, done);
+  bool traversalDone = false;
+  while(!traversalDone) {
+    auto tmpTree = rewriter.transform(tree, traversalDone);
+    if(traversalDone && tmpTree == tree) {
+      break; // no change - no reason to test
+    }
     if(test(tmpTree)) {
       tree = tmpTree;
       rewriter.moveStartToSuccesor();
