@@ -82,7 +82,6 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
           return;
         }
 
-
         if constexpr (requires { DERIVED->handle(node, isNodeRemovable); }) {
             DERIVED->handle(node, isNodeRemovable);
         }
@@ -236,9 +235,6 @@ class ImportsRemover: public OneTimeRemover<ImportsRemover> {
     removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
-  // void handle(const ModuleHeaderSyntax& node, bool isNodeRemovable) {
-  //     removeChildList(node, node.imports);
-  // }
 };
 
 class MemberRemover: public OneTimeRemover<MemberRemover> {
@@ -418,9 +414,6 @@ Stats removeLoop(OneTimeRemover<T> rewriter, std::shared_ptr<SyntaxTree>& tree, 
   stats.report(passIdx, stageName);
   return stats;
 }
-
-// Stats removeLoop2(std::shared_ptr<SyntaxTree>& tree) {
-// }
 
 Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx="-") {
   Stats stats;
