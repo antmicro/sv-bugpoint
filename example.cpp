@@ -124,10 +124,6 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
       SyntaxRewriter<TDerived>::setHoldParentPtr(false);
       auto tree2 = SyntaxRewriter<TDerived>::transform(tree);
 
-      // I'm not sure about what intended behavior is, but head of SyntaxRewriter's allocator is nulled after traversal,
-      // leading to NULL dereference when rewriter is reused. This is dirty work around this. TODO: examine it more carefully.
-      this->alloc = BumpAllocator();
-
       if(removedChild == SourceRange::NoLocation && removedSuccessor == SourceRange::NoLocation) {
         traversalDone = true;
       }
