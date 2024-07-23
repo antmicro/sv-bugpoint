@@ -1,5 +1,4 @@
-#ifndef TYPE_HPP
-#define TYPE_HPP
+#pragma once
 #include <string>
 #include <iostream>
 #include <slang/syntax/SyntaxVisitor.h>
@@ -83,6 +82,3 @@ class StatementPrinter: public TreePrinter<StatementPrinter> {
     tryPrintNode(node);
   }
 };
-
-#endif
-
