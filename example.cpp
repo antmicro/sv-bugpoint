@@ -137,7 +137,6 @@ class OneTimeRemover: public SyntaxRewriter<TDerived> {
       removedChild = SourceRange::NoLocation;
       removedSuccessor = SourceRange::NoLocation;
 
-      SyntaxRewriter<TDerived>::setHoldParentPtr(false);
       auto tree2 = SyntaxRewriter<TDerived>::transform(tree);
 
       if(removedChild == SourceRange::NoLocation && removedSuccessor == SourceRange::NoLocation) {
