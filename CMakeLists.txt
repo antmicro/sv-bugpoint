@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(example)
+project(bugpoint)
 set (CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -11,5 +11,5 @@ FetchContent_Declare(
   GIT_SHALLOW ON)
 FetchContent_MakeAvailable(slang)
 
-add_executable(example example.cpp)
-target_link_libraries(example PRIVATE slang::slang)
+add_executable(bugpoint bugpoint.cpp)
+target_link_libraries(bugpoint PRIVATE slang::slang)
