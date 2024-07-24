@@ -17,10 +17,13 @@
 using namespace slang::syntax;
 using namespace slang;
 
-const std::string originalFilename = "uvm.sv";
-const std::string outputFilename = "uvm_minimized.sv";
-const std::string tmpFilename = "uvm_test.sv";
-const std::string statsFilename = "bugpoint_stats";
+namespace files {
+  const std::string input = "./bugpoint_input.sv";
+  const std::string output = "./bugpoint_minimized.sv";
+  const std::string testOutput = "./bugpoint_test.sv";
+  const std::string testScript = "./bugpoint_test.sh";
+  const std::string stats = "./bugpoint_stats";
+}
 
 #define DERIVED static_cast<TDerived*>(this)
 
@@ -301,7 +304,7 @@ bool test() {
       exit(1);
   }
   else if(pid == 0) { // we are inside child
-      const char* const argv[] = {"./test.sh", tmpFilename.c_str(), NULL};
+      const char* const argv[] = {files::testScript.c_str(), files::testOutput.c_str(), NULL};
       if(execvp(argv[0], const_cast<char* const*>(argv))) { // replace child with prog
           perror("child: execvp error");
           _exit(1);
@@ -318,7 +321,7 @@ bool test() {
         return false;
       }
       else {
-        std::filesystem::copy(tmpFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
+        std::filesystem::copy(files::testOutput, files::output, std::filesystem::copy_options::overwrite_existing);
         return true;
       }
   }
@@ -330,7 +333,7 @@ bool test(std::shared_ptr<SyntaxTree>& tree) {
   // Write given tree to tmp file and execute ./test.sh tmpFile.
   std::ofstream tmpFile;
   tmpFile.rdbuf()->pubsetbuf(0, 0); // Enable unbuffered io. Has to be called before open to be effective
-  tmpFile.open(tmpFilename);
+  tmpFile.open(files::testOutput);
   tmpFile << SyntaxPrinter::printFile(*tree);
   return test();
 }
@@ -352,13 +355,13 @@ struct Stats {
 
   void begin()
   {
-    linesBefore = countLines(outputFilename);
+    linesBefore = countLines(files::output);
     startTime = std::chrono::high_resolution_clock::now();
   }
 
   void end()
   {
-    linesAfter = countLines(outputFilename);
+    linesAfter = countLines(files::output);
     endTime = std::chrono::high_resolution_clock::now();
   }
 
@@ -375,12 +378,12 @@ struct Stats {
   void report(std::string pass, std::string stage)
   {
     std::cerr << toStr(pass, stage);
-    std::ofstream file(statsFilename, std::ios_base::app);
+    std::ofstream file(files::stats, std::ios_base::app);
     file << toStr(pass, stage) << std::flush;
   }
 
   static void writeHeader() {
-    std::ofstream file(statsFilename);
+    std::ofstream file(files::stats);
     file << "pass\tstage\tlines_removed\tcommits\trollbacks\tattempts\ttime\n";
   }
 
@@ -436,7 +439,7 @@ Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx="-") {
 }
 
 void inspect() {
-  auto treeOrErr = SyntaxTree::fromFile("uvm.sv");
+  auto treeOrErr = SyntaxTree::fromFile(files::input);
   if (treeOrErr) {
       auto tree = *treeOrErr;
       AllPrinter printer(2);
@@ -449,8 +452,8 @@ void inspect() {
 Stats removeVerilatorConfig() {
   Stats stats;
   stats.begin();
-  std::ifstream inputFile(originalFilename);
-  std::ofstream testFile(tmpFilename);
+  std::ifstream inputFile(files::input);
+  std::ofstream testFile(files::testOutput);
   std::string line;
   while(std::getline(inputFile, line) && line != "`verilator_config") {
     testFile << line << "\n";
@@ -467,13 +470,13 @@ Stats removeVerilatorConfig() {
 }
 
 void minimize() {
-  std::filesystem::copy(originalFilename, outputFilename, std::filesystem::copy_options::overwrite_existing);
+  std::filesystem::copy(files::input, files::output, std::filesystem::copy_options::overwrite_existing);
   Stats::writeHeader();
   Stats stats;
   stats.begin();
   stats.addAttempts(removeVerilatorConfig());
 
-  auto treeOrErr = SyntaxTree::fromFile(outputFilename);
+  auto treeOrErr = SyntaxTree::fromFile(files::output);
 
   if (treeOrErr) {
       auto tree = *treeOrErr;
