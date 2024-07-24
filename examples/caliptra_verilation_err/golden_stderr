@@ -1,0 +1,5 @@
+%Error Internal Error ../V3Fork.cpp Variable's lifetime is unknown. Can't determine if a capture is necessary.
+ ... note In instance 'caliptra_top_tb.spiflash0'
+ @(negedge sck);
+ ^~~
+ ... See the manual at https//verilator.org/verilator_doc.html for more assistance.
