@@ -20,8 +20,8 @@ using namespace slang;
 namespace files {
   const std::string input = "./bugpoint_input.sv";
   const std::string output = "./bugpoint_minimized.sv";
-  const std::string testOutput = "./bugpoint_test.sv";
-  const std::string testScript = "./bugpoint_test.sh";
+  const std::string tmpOutput = "./bugpoint_tmp.sv";
+  const std::string checkScript = "./bugpoint_check.sh";
   const std::string stats = "./bugpoint_stats";
 }
 
@@ -304,7 +304,7 @@ bool test() {
       exit(1);
   }
   else if(pid == 0) { // we are inside child
-      const char* const argv[] = {files::testScript.c_str(), files::testOutput.c_str(), NULL};
+      const char* const argv[] = {files::checkScript.c_str(), files::tmpOutput.c_str(), NULL};
       if(execvp(argv[0], const_cast<char* const*>(argv))) { // replace child with prog
           perror("child: execvp error");
           _exit(1);
@@ -321,7 +321,7 @@ bool test() {
         return false;
       }
       else {
-        std::filesystem::copy(files::testOutput, files::output, std::filesystem::copy_options::overwrite_existing);
+        std::filesystem::copy(files::tmpOutput, files::output, std::filesystem::copy_options::overwrite_existing);
         return true;
       }
   }
@@ -333,7 +333,7 @@ bool test(std::shared_ptr<SyntaxTree>& tree) {
   // Write given tree to tmp file and execute ./test.sh tmpFile.
   std::ofstream tmpFile;
   tmpFile.rdbuf()->pubsetbuf(0, 0); // Enable unbuffered io. Has to be called before open to be effective
-  tmpFile.open(files::testOutput);
+  tmpFile.open(files::tmpOutput);
   tmpFile << SyntaxPrinter::printFile(*tree);
   return test();
 }
@@ -453,7 +453,7 @@ Stats removeVerilatorConfig() {
   Stats stats;
   stats.begin();
   std::ifstream inputFile(files::input);
-  std::ofstream testFile(files::testOutput);
+  std::ofstream testFile(files::tmpOutput);
   std::string line;
   while(std::getline(inputFile, line) && line != "`verilator_config") {
     testFile << line << "\n";
