@@ -9,7 +9,7 @@ Bugpoint currently only works on single-file inputs (e.g. already preprocessed s
 
 ## Build
 ```sh
-cmake -B build
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j8
 ```
 
