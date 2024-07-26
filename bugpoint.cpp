@@ -305,8 +305,10 @@ bool test() {
   } else if (pid == 0) {  // we are inside child
     const char* const argv[] = {files::checkScript.c_str(), files::tmpOutput.c_str(), NULL};
     if (execvp(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
-      perror("child: execvp error");
-      _exit(1);
+      std::string err = "bugpoint: failed to lanuch " + files::checkScript;
+      perror(err.c_str());
+      kill(getppid(), SIGINT); // terminate parent
+      exit(1);
     }
   } else {  // we are in parent
     int wstatus;
@@ -445,7 +447,8 @@ void inspect() {
     AllPrinter printer(2);
     printer.visit(tree->root());
   } else {
-    /* do something with result.error() */
+    std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+    exit(1);
   }
 }
 
@@ -470,8 +473,13 @@ Stats removeVerilatorConfig() {
 }
 
 void minimize() {
-  std::filesystem::copy(files::input, files::output,
-                        std::filesystem::copy_options::overwrite_existing);
+  try {
+    std::filesystem::copy(files::input, files::output,
+                          std::filesystem::copy_options::overwrite_existing);
+  } catch(const std::filesystem::filesystem_error& err) {
+    std::cerr << "bugpoint: failed to copy " << files::input << ": " << err.code().message() << "\n";
+    exit(1);
+  }
   Stats::writeHeader();
   Stats stats;
   stats.begin();
@@ -490,7 +498,8 @@ void minimize() {
     } while (substats.linesAfter < substats.linesBefore);
 
   } else {
-    /* do something with result.error() */
+      std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+      exit(1);
   }
   stats.end();
   stats.report("*", "*");
