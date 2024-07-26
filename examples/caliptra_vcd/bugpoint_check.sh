@@ -10,13 +10,12 @@
 verilator --cc -CFLAGS "-std=c++11" "$1" \
   +libext+.v+.sv +define+RV_OPENSOURCE \
   --timescale 1ns/1ps \
-  -I/home/ant/tmp/caliptra_workspace/caliptra-rtl/tools/scripts \
+  -I"$CALIPTRA_ROOT"/tools/scripts \
   -Wno-WIDTH -Wno-UNOPTFLAT -Wno-LITENDIAN -Wno-CMPCONST -Wno-MULTIDRIVEN -Wno-UNPACKED -Wno-IMPLICITSTATIC \
   --top-module caliptra_top_tb \
-   \
   -exe test_caliptra_top_tb.cpp --autoflush --trace --trace-structs || exit 1
-#+define+CALIPTRA_INTERNAL_TRNG
-cp $CALIPTRA_ROOT/src/integration/tb/test_caliptra_top_tb.cpp obj_dir/
+
+cp "$CALIPTRA_ROOT"/src/integration/tb/test_caliptra_top_tb.cpp obj_dir/
 make -j -e -C obj_dir/ -f Vcaliptra_top_tb.mk OPT_FAST="-O0" OPT_GLOBAL="-O0" VM_PARALLEL_BUILDS=1 2>/dev/null
 
 cleanup() {
