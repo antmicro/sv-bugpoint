@@ -21,18 +21,19 @@ inline std::string demangle(const char* mangled) {
   return outStr;
 }
 
-inline std::string removeAllNeddles(std::string haystack, std::string needle) {
+// remove all occurrences of pattern from src string
+inline std::string removeAll(std::string src, std::string pattern) {
   size_t pos;
-  while((pos = haystack.find(needle)) != std::string::npos) {
-    haystack.erase(pos, needle.length());
+  while((pos = src.find(pattern)) != std::string::npos) {
+    src.erase(pos, pattern.length());
   }
-  return haystack;
+  return src;
 }
 
 inline std::string prettifyNodeTypename(const char* type) {
   // stringize type of node, demangle and remove namespace specifier
   std::string demangled = demangle(type);
-  return removeAllNeddles(demangled, "slang::syntax::");
+  return removeAll(demangled, "slang::syntax::");
 }
 
 #define DERIVED static_cast<TDerived*>(this)
