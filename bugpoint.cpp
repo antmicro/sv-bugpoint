@@ -190,10 +190,19 @@ class BodyPartsRemover : public OneTimeRemover<BodyPartsRemover> {
     removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
+  void handle(const ElseClauseSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
 };
 
 class BodyRemover : public OneTimeRemover<BodyRemover> {
  public:
+  void handle(const ClassDeclarationSyntax& node, bool isNodeRemovable) {
+    removeChildList(node, node.items);
+    visitDefault(node);
+  }
+
   void handle(const FunctionDeclarationSyntax& node, bool isNodeRemovable) {
     removeChildList(node, node.items);
     visitDefault(node);
@@ -201,6 +210,11 @@ class BodyRemover : public OneTimeRemover<BodyRemover> {
 
   void handle(const ModuleDeclarationSyntax& node, bool isNodeRemovable) {
     removeChildList(node, node.members);
+    visitDefault(node);
+  }
+
+  void handle(const BlockStatementSyntax& node, bool isNodeRemovable) {
+    removeChildList(node, node.items);
     visitDefault(node);
   }
 };
@@ -221,6 +235,36 @@ class DeclRemover : public OneTimeRemover<DeclRemover> {
     removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
+
+  void handle(const ForwardTypedefDeclarationSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
+
+  void handle(const ClassDeclarationSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
+
+  void handle(const ImplementsClauseSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
+
+  void handle(const ExtendsClauseSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
+
+  void handle(const ConstraintDeclarationSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
+
+  void handle(const ClassMethodPrototypeSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
 };
 
 class StatementsRemover : public OneTimeRemover<StatementsRemover> {
@@ -230,6 +274,10 @@ class StatementsRemover : public OneTimeRemover<StatementsRemover> {
     visitDefault(node);
   }
   void handle(const StatementSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
+  void handle(const LocalVariableDeclarationSyntax& node, bool isNodeRemovable) {
     removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
