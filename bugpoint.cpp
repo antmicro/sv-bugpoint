@@ -69,7 +69,8 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
       state = REMOVAL_ALLOWED;
     }
 
-    if (state == REGISTER_CHILD && node.sourceRange() != SourceRange::NoLocation) {
+    if (state == REGISTER_CHILD && node.sourceRange() != SourceRange::NoLocation
+        && node.sourceRange() != removed) { // avoid marking removed node as its own children
       removedChild = node.sourceRange();
       state = WAIT_FOR_PARENT_EXIT;
       return;
