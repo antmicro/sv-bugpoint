@@ -266,6 +266,11 @@ class DeclRemover : public OneTimeRemover<DeclRemover> {
     removeNode(node, isNodeRemovable);
     visitDefault(node);
   }
+
+  void handle(const ClassMethodDeclarationSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    visitDefault(node);
+  }
 };
 
 class StatementsRemover : public OneTimeRemover<StatementsRemover> {
@@ -307,6 +312,10 @@ class MemberRemover : public OneTimeRemover<MemberRemover> {
   }
 
   void handle(const ParameterDeclarationStatementSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+  }
+
+  void handle(const ClassPropertyDeclarationSyntax& node, bool isNodeRemovable) {
     removeNode(node, isNodeRemovable);
   }
 
