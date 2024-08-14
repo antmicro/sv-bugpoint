@@ -1,6 +1,8 @@
 #include <slang/syntax/AllSyntax.h>
 #include <slang/syntax/SyntaxPrinter.h>
 #include <slang/syntax/SyntaxTree.h>
+#include <slang/ast/Compilation.h>
+#include <slang/ast/ASTVisitor.h>
 #include <slang/syntax/SyntaxVisitor.h>
 #include <slang/text/SourceLocation.h>
 #include <slang/text/SourceManager.h>
@@ -11,10 +13,9 @@
 #include <fstream>
 #include <iostream>
 #include "debug.hpp"
-#include "slang/syntax/SyntaxNode.h"
-#include "slang/util/BumpAllocator.h"
 
 using namespace slang::syntax;
+using namespace slang::ast;
 using namespace slang;
 
 namespace files {
@@ -369,6 +370,94 @@ class InstantationRemover : public OneTimeRemover<InstantationRemover> {
   }
 };
 
+class PairRemover : public SyntaxRewriter<PairRemover> {
+  // each tranform yields removal of pair of nodes (based on locations in suplied pairs list)
+ public:
+    std::vector<std::pair<SourceRange, SourceRange>> pairs;
+    std::pair<SourceRange, SourceRange> searchedPair;
+
+    PairRemover(std::vector<std::pair<SourceRange, SourceRange>>&& pairs): pairs(pairs) {}
+
+    std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree,
+                                          bool& traversalDone) {
+      if(pairs.empty()) {
+        traversalDone = true;
+        return tree;
+      }
+      searchedPair = pairs.back();
+      pairs.pop_back();
+      auto tree2 = SyntaxRewriter<PairRemover>::transform(tree);
+      // maybe do it in while(not changed) loop
+      traversalDone = pairs.empty();
+      return tree2;
+    }
+
+  /// The default handler invoked when no visit() method is overridden for a particular type.
+  /// Will visit all child nodes by default.
+  template <typename T>
+  void visitDefault(T&& node) {
+    for (uint32_t i = 0; i < node.getChildCount(); i++) {
+      auto child = node.childNode(i);
+      if (child)
+        child->visit(*this, node.isChildOptional(i));
+    }
+  }
+
+  template <typename T>
+  void visit(T&& node, bool isNodeRemovable = true) {
+      bool found = node.sourceRange() == searchedPair.first || node.sourceRange() == searchedPair.second;
+      if(isNodeRemovable && found && node.sourceRange() != SourceRange::NoLocation) {
+        std::cerr << node.toString() << "\n";
+        remove(node);
+      }
+
+      visitDefault(node);
+  }
+};
+
+class ExternMapper : public ASTVisitor<ExternMapper, true, true, true> {
+  // build vector of extern methods' pairs (prototypeLocation, implementationLocation)
+  public:
+    std::vector<std::pair<SourceRange, SourceRange>> pairs;
+
+    void handle(const GenericClassDefSymbol& t) {
+        ASTVisitor<ExternMapper, true, true, true>::visitDefault(t);
+        if (t.numSpecializations() == 0) {
+            // in order to visit members of not specialized class we create an artificial specialization
+            t.getInvalidSpecialization().visit(*this);
+        }
+    }
+
+    void handle(const MethodPrototypeSymbol& proto) {
+      SourceRange protoLocation = SourceRange::NoLocation;
+      SourceRange implLocation = SourceRange::NoLocation;
+      if(proto.getSyntax()) {
+        protoLocation = proto.getSyntax()->sourceRange();
+      } else {
+        exit(1);
+      }
+
+      auto impl = proto.getSubroutine();
+      if(impl && impl->getSyntax()) {
+          implLocation = impl->getSyntax()->sourceRange();
+      }
+
+      if(protoLocation != SourceRange::NoLocation || implLocation != SourceRange::NoLocation) {
+        pairs.push_back({protoLocation, implLocation});
+      }
+      visitDefault(proto);
+    }
+};
+
+PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics(); // kludge for launching full elaboration
+    ExternMapper mapper;
+    compilation.getRoot().visit(mapper);
+    return PairRemover(std::move(mapper.pairs));
+}
+
 bool test() {
   // Execute ./test.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
@@ -495,6 +584,31 @@ Stats removeLoop(OneTimeRemover<T> rewriter,
   return stats;
 }
 
+Stats removeLoop(PairRemover rewriter,
+                 std::shared_ptr<SyntaxTree>& tree,
+                 std::string stageName,
+                 std::string passIdx) {
+  Stats stats;
+  stats.begin();
+  bool traversalDone = false;
+  while (!traversalDone) {
+    auto tmpTree = rewriter.transform(tree, traversalDone);
+    if (traversalDone && tmpTree == tree) {
+      break;  // no change - no reason to test
+    }
+    if (test(tmpTree)) {
+      tree = tmpTree;
+      stats.commits++;
+    } else {
+      stats.rollbacks++;
+    }
+  }
+  stats.end();
+  stats.report(passIdx, stageName);
+  return stats;
+}
+
+
 Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
   Stats stats;
   stats.begin();
@@ -502,6 +616,7 @@ Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
   stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover", passIdx));
   stats.addAttempts(removeLoop(InstantationRemover(), tree, "instantationRemover", passIdx));
   stats.addAttempts(removeLoop(BodyPartsRemover(), tree, "bodyPartsRemover", passIdx));
+  stats.addAttempts(removeLoop(makeExternRemover(tree), tree, "externRemover", passIdx));
   stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover", passIdx));
   stats.addAttempts(removeLoop(StatementsRemover(), tree, "statementsRemover", passIdx));
   stats.addAttempts(removeLoop(ImportsRemover(), tree, "importsRemover", passIdx));
@@ -522,6 +637,21 @@ void inspect() {
     auto tree = *treeOrErr;
     AllPrinter printer(2);
     printer.visit(tree->root());
+  } else {
+    std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+    exit(1);
+  }
+}
+
+void inspectAST() {
+  auto treeOrErr = SyntaxTree::fromFile(files::input);
+  if (treeOrErr) {
+    auto tree = *treeOrErr;
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics(); // kludge for launching full elaboration
+    AstPrinter printer;
+    printer.visit(compilation.getRoot());
   } else {
     std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
     exit(1);
@@ -585,5 +715,6 @@ void minimize() {
 
 int main() {
   // inspect();
+  // inspectAST();
   minimize();
 }

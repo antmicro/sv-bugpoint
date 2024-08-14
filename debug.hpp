@@ -1,9 +1,11 @@
 #pragma once
 #include <string>
 #include <iostream>
+#include <slang/ast/ASTVisitor.h>
 #include <slang/syntax/SyntaxVisitor.h>
 #include <slang/syntax/AllSyntax.h>
 
+using namespace slang::ast;
 using namespace slang::syntax;
 using namespace slang;
 
@@ -61,6 +63,7 @@ class TreePrinter: public SyntaxVisitor<TDerived> {
         printIndent();
         std::string type = prettifyNodeTypename(typeid(node).name());
         std::cout << type << ", " << node.kind << ", lines: " << lines << "\n";
+        std::cout << node.toString() << "\n";
         DERIVED->visitDefault(node);
         indentLevel--;
       } else {
@@ -81,5 +84,18 @@ class StatementPrinter: public TreePrinter<StatementPrinter> {
   public:
   void handle(const StatementSyntax& node) {
     tryPrintNode(node);
+  }
+};
+
+
+class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
+  public:
+      template <typename T>
+      void handle(const T& node) {
+      std::cerr <<"node: " << typeid(T).name() << " " <<toString(node.kind) << " "<< "\n";
+      if constexpr (requires { node.getSyntax(); }) {
+        if(node.getSyntax()) std::cerr << node.getSyntax()->toString() << "\n";
+      }
+      visitDefault(node);
   }
 };
