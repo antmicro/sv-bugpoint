@@ -573,7 +573,7 @@ void minimize() {
     do {
       substats = pass(tree, std::to_string(i++));
       stats.addAttempts(substats);
-    } while (substats.linesAfter < substats.linesBefore);
+    } while (substats.commits > 0);
 
   } else {
       std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
