@@ -538,10 +538,12 @@ Stats removeVerilatorConfig() {
     testFile << line << "\n";
   }
   testFile << std::flush;
-  if (test()) {
-    stats.commits++;
-  } else {
-    stats.rollbacks++;
+  if (line == "`verilator_config") {
+    if (test()) {
+      stats.commits++;
+    } else {
+      stats.rollbacks++;
+    }
   }
   stats.end();
   stats.report("-", "verilatorConfigRemover");
