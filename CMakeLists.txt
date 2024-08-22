@@ -7,7 +7,7 @@ include(FetchContent)
 FetchContent_Declare(
   slang
   GIT_REPOSITORY https://github.com/MikePopoloski/slang.git
-  GIT_TAG dc010f37a82898e7ca5365d8a32c86f127b49b34
+  GIT_TAG f6e351086d5209f4aa518ec01647eb9208fc7912
 )
 FetchContent_MakeAvailable(slang)
 
