@@ -9,9 +9,9 @@ using namespace slang::ast;
 using namespace slang::syntax;
 using namespace slang;
 
-// This is non-portable. TODO: ifdef it or something
+#ifdef __GLIBCXX__
 #include <cxxabi.h>
-inline std::string demangle(const char* mangled) {
+inline std::string tryDemangle(const char* mangled) {
   int rc;
   char* out = abi::__cxa_demangle(mangled, NULL, NULL, &rc);
   if(rc != 0) {
@@ -22,6 +22,11 @@ inline std::string demangle(const char* mangled) {
   free(out);
   return outStr;
 }
+#else
+inline std::string tryDemangle(const char* mangled) {
+  return mangled;
+}
+#endif
 
 // remove all occurrences of pattern from src string
 inline std::string removeAll(std::string src, std::string pattern) {
@@ -34,7 +39,7 @@ inline std::string removeAll(std::string src, std::string pattern) {
 
 inline std::string prettifyNodeTypename(const char* type) {
   // stringize type of node, demangle and remove namespace specifier
-  std::string demangled = demangle(type);
+  std::string demangled = tryDemangle(type);
   return removeAll(demangled, "slang::syntax::");
 }
 
