@@ -40,7 +40,7 @@ inline std::string removeAll(std::string src, std::string pattern) {
 inline std::string prettifyNodeTypename(const char* type) {
   // demangle and remove namespace specifier from stringized node type
   std::string demangled = tryDemangle(type);
-  return removeAll(demangled, "slang::syntax::");
+  return removeAll(removeAll(demangled, "slang::syntax::"), "slang::ast::");
 }
 
 // stringize type of node, demangle and remove namespace specifier
@@ -99,7 +99,7 @@ class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
   public:
       template <typename T>
       void handle(const T& node) {
-      std::cerr <<"node: " << typeid(T).name() << " " <<toString(node.kind) << " "<< "\n";
+      std::cerr <<"node: " << STRINGIZE_NODE_TYPE(T) << " " << toString(node.kind) << " "<< "\n";
       if constexpr (requires { node.getSyntax(); }) {
         if(node.getSyntax()) std::cerr << node.getSyntax()->toString() << "\n";
       }

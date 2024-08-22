@@ -124,7 +124,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
   template <typename T>
   void removeNode(const T& node, bool isNodeRemovable) {
     if (shouldRemove(node, isNodeRemovable)) {
-      std::cerr << typeid(T).name() << "\n";
+      std::cerr << STRINGIZE_NODE_TYPE(T) << "\n";
       std::cerr << node.toString() << "\n";
       DERIVED->remove(node);
       removed = node.sourceRange();
@@ -135,7 +135,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
   template <typename TParent, typename TChild>
   void removeChildList(const TParent& parent, const SyntaxList<TChild>& childList) {
     if (shouldRemove(childList)) {
-      std::cerr << typeid(TParent).name() << "\n";
+      std::cerr << STRINGIZE_NODE_TYPE(TParent) << "\n";
       for (auto item : childList) {
         DERIVED->remove(*item);
         std::cerr << item->toString();
