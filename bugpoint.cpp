@@ -536,6 +536,80 @@ PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
     return PairRemover(std::move(mapper.pairs));
 }
 
+class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
+  // build vector of port pairs (defLocation, useLocation)
+  public:
+    class FindConnectionSyntax: public SyntaxVisitor<FindConnectionSyntax>{
+      public:
+        // PortConnection symbol does not have getSyntax() or sourceRange() methods.
+        // This visitor finds sourceRange by locating PortConnectionSyntax that contains same expr as symbol
+        enum {
+          WAIT_FOR_EXPR,
+          REGISTER_PORT_CONN,
+          END,
+        } state;
+
+        SourceRange exprLoc;
+        SourceRange connLoc;
+        FindConnectionSyntax(const PortConnection* symbol): connLoc(SourceRange::NoLocation), state(WAIT_FOR_EXPR)
+        {
+          auto expr = symbol ? symbol->getExpression() : nullptr;
+          exprLoc = expr ? expr->sourceRange : SourceRange::NoLocation;
+          if(exprLoc == SourceRange::NoLocation) {
+            state = END;
+          }
+        }
+
+        void handle(const PortConnectionSyntax& t) {
+          visitDefault(t);
+          if(state == REGISTER_PORT_CONN) {
+            state = END;
+            connLoc = t.sourceRange();
+          }
+        }
+        void handle(const ExpressionSyntax& t) {
+          if(state == WAIT_FOR_EXPR && t.sourceRange() == exprLoc) {
+            state = REGISTER_PORT_CONN;
+          }
+        }
+    };
+
+    std::vector<std::pair<SourceRange, SourceRange>> pairs;
+    void handle(const InstanceSymbol& instance) {
+      for(auto conn: instance.getPortConnections()) {
+        if(!conn)
+          continue;
+
+        SourceRange defLocation = SourceRange::NoLocation;
+        SourceRange useLocation = SourceRange::NoLocation;
+
+        if(conn->port.getSyntax()) {
+          defLocation = conn->port.getSyntax()->parent->sourceRange();
+        }
+
+        if(instance.getSyntax()) {
+          FindConnectionSyntax finder(conn);
+          instance.getSyntax()->visit(finder);
+          useLocation = finder.connLoc;
+        }
+
+        if(defLocation != SourceRange::NoLocation || useLocation != SourceRange::NoLocation) {
+          pairs.push_back({defLocation, useLocation});
+        }
+      }
+      visitDefault(instance);
+    }
+};
+
+PairRemover makePortsRemover(std::shared_ptr<SyntaxTree>& tree) {
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics(); // kludge for launching full elaboration
+    PortMapper mapper;
+    compilation.getRoot().visit(mapper);
+    return PairRemover(std::move(mapper.pairs));
+}
+
 bool test(AttemptStats& stats) {
   // Execute ./test.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
@@ -645,6 +719,7 @@ bool pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
   commited |= removeLoop(ContAssignRemover(), tree, "contAssignRemover", passIdx);
   commited |= removeLoop(MemberRemover(), tree, "memberRemover", passIdx);
   commited |= removeLoop(ModportRemover(), tree, "modportRemover", passIdx);
+  commited |= removeLoop(makePortsRemover(tree), tree, "portsRemover", passIdx);
 
   return commited;
 }
