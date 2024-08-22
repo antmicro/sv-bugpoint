@@ -408,6 +408,7 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
   void visit(T&& node, bool isNodeRemovable = true) {
       bool found = node.sourceRange() == searchedPair.first || node.sourceRange() == searchedPair.second;
       if(isNodeRemovable && found && node.sourceRange() != SourceRange::NoLocation) {
+        std::cerr << prettifyNodeTypename(typeid(T).name()) << "\n";
         std::cerr << node.toString() << "\n";
         remove(node);
       }
