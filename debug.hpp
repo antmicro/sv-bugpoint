@@ -38,10 +38,13 @@ inline std::string removeAll(std::string src, std::string pattern) {
 }
 
 inline std::string prettifyNodeTypename(const char* type) {
-  // stringize type of node, demangle and remove namespace specifier
+  // demangle and remove namespace specifier from stringized node type
   std::string demangled = tryDemangle(type);
   return removeAll(demangled, "slang::syntax::");
 }
+
+// stringize type of node, demangle and remove namespace specifier
+#define STRINGIZE_NODE_TYPE(TYPE) prettifyNodeTypename(typeid(TYPE).name())
 
 #define DERIVED static_cast<TDerived*>(this)
 template<typename TDerived>
@@ -66,8 +69,7 @@ class TreePrinter: public SyntaxVisitor<TDerived> {
       if(lines >= minLinesFilter) {
         indentLevel++;
         printIndent();
-        std::string type = prettifyNodeTypename(typeid(node).name());
-        std::cout << type << ", " << node.kind << ", lines: " << lines << "\n";
+        std::cout << STRINGIZE_NODE_TYPE(T) << ", " << node.kind << ", lines: " << lines << "\n";
         std::cout << node.toString() << "\n";
         DERIVED->visitDefault(node);
         indentLevel--;
