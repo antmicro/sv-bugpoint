@@ -140,6 +140,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
         DERIVED->remove(*item);
         std::cerr << item->toString();
       }
+      std::cerr << "\n";
       removed = parent.sourceRange();
       state = REGISTER_CHILD;  // TODO: examine whether we register right child here
     }
