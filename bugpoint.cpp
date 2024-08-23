@@ -23,8 +23,62 @@ const std::string input = "./bugpoint_input.sv";
 const std::string output = "./bugpoint_minimized.sv";
 const std::string tmpOutput = "./bugpoint_tmp.sv";
 const std::string checkScript = "./bugpoint_check.sh";
-const std::string stats = "./bugpoint_stats";
+const std::string trace = "./bugpoint_trace";
 }  // namespace files
+
+int countLines(std::string filename) {
+  int count = 0;
+  std::ifstream file(filename);
+  for (std::string line; std::getline(file, line); ++count) {
+  }  // probably not a smartest way, but should be fine
+  return count;
+}
+
+class AttemptStats {
+public:
+  std::string pass;
+  std::string stage;
+  int linesBefore;
+  int linesAfter;
+  std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
+  std::chrono::time_point<std::chrono::high_resolution_clock> endTime;
+  bool committed;
+  std::string extraInfo;
+
+  AttemptStats(std::string pass, std::string stage): pass(pass), stage(stage), committed(false)
+  {}
+
+  AttemptStats& begin() {
+    linesBefore = countLines(files::output);
+    startTime = std::chrono::high_resolution_clock::now();
+    return *this;
+  }
+
+  AttemptStats& end(bool committed) {
+    this->committed = committed;
+    linesAfter = countLines(files::output);
+    endTime = std::chrono::high_resolution_clock::now();
+    return *this;
+  }
+
+  std::string toStr() const {
+    std::stringstream tmp;
+    int lines = linesBefore - linesAfter;
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime);
+    tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration << '\t' << extraInfo << "\n";
+    return tmp.str();
+  }
+
+  void report() {
+    std::cerr << toStr();
+    std::ofstream file(files::trace, std::ios_base::app);
+    file << toStr() << std::flush;
+  }
+  static void writeHeader() {
+    std::ofstream file(files::trace);
+    file << "pass\tstage\tlines_removed\tstatus\ttime\textra_info\n";
+  }
+};
 
 #define DERIVED static_cast<TDerived*>(this)
 
@@ -460,11 +514,11 @@ PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
     return PairRemover(std::move(mapper.pairs));
 }
 
-bool test() {
+bool test(AttemptStats& stats) {
   // Execute ./test.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
   // On fail (non-zero exit code) return false.
-
+  stats.begin();
   pid_t pid = fork();
   if (pid == -1) {
     perror("fork failed");
@@ -485,10 +539,12 @@ bool test() {
       exit(1);
     }
     if (WEXITSTATUS(wstatus)) {
+      stats.end(false).report();
       return false;
     } else {
       std::filesystem::copy(files::tmpOutput, files::output,
                             std::filesystem::copy_options::overwrite_existing);
+      stats.end(true).report();
       return true;
     }
   }
@@ -496,141 +552,79 @@ bool test() {
   return false;  // just to make compiler happy - will never get here
 }
 
-bool test(std::shared_ptr<SyntaxTree>& tree) {
+bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info) {
   // Write given tree to tmp file and execute ./test.sh tmpFile.
   std::ofstream tmpFile;
   tmpFile.rdbuf()->pubsetbuf(
       0, 0);  // Enable unbuffered io. Has to be called before open to be effective
   tmpFile.open(files::tmpOutput);
   tmpFile << SyntaxPrinter::printFile(*tree);
-  return test();
+  return test(info);
 }
-
-int countLines(std::string filename) {
-  int count = 0;
-  std::ifstream file(filename);
-  for (std::string line; std::getline(file, line); ++count) {
-  }  // probably not a smartest way, but should be fine
-  return count;
-}
-
-struct Stats {
-  int commits = 0;
-  int rollbacks = 0;
-  int linesBefore;
-  int linesAfter;
-  std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
-  std::chrono::time_point<std::chrono::high_resolution_clock> endTime;
-
-  void begin() {
-    linesBefore = countLines(files::output);
-    startTime = std::chrono::high_resolution_clock::now();
-  }
-
-  void end() {
-    linesAfter = countLines(files::output);
-    endTime = std::chrono::high_resolution_clock::now();
-  }
-
-  std::string toStr(std::string pass, std::string stage) {
-    std::stringstream tmp;
-    int lines = linesBefore - linesAfter;
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime);
-    int attempts = rollbacks + commits;
-    tmp << pass << '\t' << stage << '\t' << lines << '\t' << commits << '\t' << rollbacks << '\t'
-        << attempts << '\t' << duration << '\n';
-    return tmp.str();
-  }
-
-  void report(std::string pass, std::string stage) {
-    std::cerr << toStr(pass, stage);
-    std::ofstream file(files::stats, std::ios_base::app);
-    file << toStr(pass, stage) << std::flush;
-  }
-
-  static void writeHeader() {
-    std::ofstream file(files::stats);
-    file << "pass\tstage\tlines_removed\tcommits\trollbacks\tattempts\ttime\n";
-  }
-
-  void addAttempts(Stats rhs) {
-    commits += rhs.commits;
-    rollbacks += rhs.rollbacks;
-  }
-};
 
 template <typename T>
-Stats removeLoop(OneTimeRemover<T> rewriter,
+bool removeLoop(OneTimeRemover<T> rewriter,
                  std::shared_ptr<SyntaxTree>& tree,
                  std::string stageName,
                  std::string passIdx) {
-  Stats stats;
-  stats.begin();
+  bool committed = false;
   bool traversalDone = false;
+
   while (!traversalDone) {
+    auto stats = AttemptStats(passIdx, stageName);;
     auto tmpTree = rewriter.transform(tree, traversalDone);
     if (traversalDone && tmpTree == tree) {
       break;  // no change - no reason to test
     }
-    if (test(tmpTree)) {
+    if (test(tmpTree, stats)) {
       tree = tmpTree;
       rewriter.moveStartToSuccesor();
-      stats.commits++;
+      committed = true;
     } else {
       rewriter.moveStartToChildOrSuccesor();
-      stats.rollbacks++;
     }
   }
-  stats.end();
-  stats.report(passIdx, stageName);
-  return stats;
+  return committed;
 }
 
-Stats removeLoop(PairRemover rewriter,
+bool removeLoop(PairRemover rewriter,
                  std::shared_ptr<SyntaxTree>& tree,
                  std::string stageName,
                  std::string passIdx) {
-  Stats stats;
-  stats.begin();
+  bool committed = false;
   bool traversalDone = false;
+
   while (!traversalDone) {
+    auto stats = AttemptStats(passIdx, stageName);
     auto tmpTree = rewriter.transform(tree, traversalDone);
     if (traversalDone && tmpTree == tree) {
       break;  // no change - no reason to test
     }
-    if (test(tmpTree)) {
+    if (test(tmpTree, stats)) {
       tree = tmpTree;
-      stats.commits++;
-    } else {
-      stats.rollbacks++;
+      committed = true;
     }
   }
-  stats.end();
-  stats.report(passIdx, stageName);
-  return stats;
+  return committed;
 }
 
 
-Stats pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
-  Stats stats;
-  stats.begin();
+bool pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
+  bool commited = false;
 
-  stats.addAttempts(removeLoop(BodyRemover(), tree, "bodyRemover", passIdx));
-  stats.addAttempts(removeLoop(InstantationRemover(), tree, "instantationRemover", passIdx));
-  stats.addAttempts(removeLoop(BodyPartsRemover(), tree, "bodyPartsRemover", passIdx));
-  stats.addAttempts(removeLoop(makeExternRemover(tree), tree, "externRemover", passIdx));
-  stats.addAttempts(removeLoop(DeclRemover(), tree, "declRemover", passIdx));
-  stats.addAttempts(removeLoop(StatementsRemover(), tree, "statementsRemover", passIdx));
-  stats.addAttempts(removeLoop(ImportsRemover(), tree, "importsRemover", passIdx));
-  stats.addAttempts(removeLoop(ParamAssignRemover(), tree, "paramAssignRemover", passIdx));
-  stats.addAttempts(removeLoop(ContAssignRemover(), tree, "contAssignRemover", passIdx));
-  stats.addAttempts(removeLoop(MemberRemover(), tree, "memberRemover", passIdx));
-  stats.addAttempts(removeLoop(ModportRemover(), tree, "modportRemover", passIdx));
+  commited |= removeLoop(BodyRemover(), tree, "bodyRemover", passIdx);
+  commited |= removeLoop(InstantationRemover(), tree, "instantationRemover", passIdx);
+  commited |= removeLoop(BodyPartsRemover(), tree, "bodyPartsRemover", passIdx);
+  commited |= removeLoop(makeExternRemover(tree), tree, "externRemover", passIdx);
+  commited |= removeLoop(DeclRemover(), tree, "declRemover", passIdx);
+  commited |= removeLoop(StatementsRemover(), tree, "statementsRemover", passIdx);
+  commited |= removeLoop(ImportsRemover(), tree, "importsRemover", passIdx);
+  commited |= removeLoop(ParamAssignRemover(), tree, "paramAssignRemover", passIdx);
+  commited |= removeLoop(ContAssignRemover(), tree, "contAssignRemover", passIdx);
+  commited |= removeLoop(MemberRemover(), tree, "memberRemover", passIdx);
+  commited |= removeLoop(ModportRemover(), tree, "modportRemover", passIdx);
 
-  stats.end();
-  stats.report(passIdx, "*");
-
-  return stats;
+  return commited;
 }
 
 void inspect() {
@@ -660,9 +654,8 @@ void inspectAST() {
   }
 }
 
-Stats removeVerilatorConfig() {
-  Stats stats;
-  stats.begin();
+bool removeVerilatorConfig() {
+  auto info = AttemptStats("-", "verilatorConfigRemover");
   std::ifstream inputFile(files::input);
   std::ofstream testFile(files::tmpOutput);
   std::string line;
@@ -670,16 +663,8 @@ Stats removeVerilatorConfig() {
     testFile << line << "\n";
   }
   testFile << std::flush;
-  if (line == "`verilator_config") {
-    if (test()) {
-      stats.commits++;
-    } else {
-      stats.rollbacks++;
-    }
-  }
-  stats.end();
-  stats.report("-", "verilatorConfigRemover");
-  return stats;
+  if (line == "`verilator_config") return test(info);
+  else return false;
 }
 
 void minimize() {
@@ -690,29 +675,24 @@ void minimize() {
     std::cerr << "bugpoint: failed to copy " << files::input << ": " << err.code().message() << "\n";
     exit(1);
   }
-  Stats::writeHeader();
-  Stats stats;
-  stats.begin();
-  stats.addAttempts(removeVerilatorConfig());
+  AttemptStats::writeHeader();
+  removeVerilatorConfig();
 
   auto treeOrErr = SyntaxTree::fromFile(files::output);
 
   if (treeOrErr) {
     auto tree = *treeOrErr;
 
-    int i = 1;
-    Stats substats;
+    int passIdx = 1;
+    bool committed;
     do {
-      substats = pass(tree, std::to_string(i++));
-      stats.addAttempts(substats);
-    } while (substats.commits > 0);
+      committed = pass(tree, std::to_string(passIdx++));
+    } while (committed);
 
   } else {
       std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
       exit(1);
   }
-  stats.end();
-  stats.report("*", "*");
 }
 
 int main() {
