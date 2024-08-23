@@ -1,0 +1,38 @@
+#!/bin/sh
+# create concise minimization summary from bugpoint_trace provided on stdin
+awk '
+NR==1{
+  FS=OFS="\t"
+  print "pass\tstage\tlines_removed\tcommits\trollbacks\tattempts\ttime";
+  next;
+}
+NR==2 { pass=$1; stage=$2; }
+$1!=pass || $2!=stage { handleStageEnd() }
+$1!=pass { handlePassEnd() }
+{ handleAttempt() }
+END { handleStageEnd(); handlePassEnd(); printRecord("*","*",totalStats); }
+
+function mergeStats(lhs, rhs,     i) {
+  # accumulate rhs into lhs and destroy (zero-out) rhs
+  for(i in rhs) lhs[i] += rhs[i];
+  delete rhs
+}
+function printRecord(pass, stage, stats) {
+   print pass, stage, stats["lines"], stats["commits"], stats["attempts"]-stats["commits"], stats["attempts"], stats["time"]"s";
+}
+function handleAttempt() {
+   sub(/s/,"",$5); # remove time unit suffix
+   tmp["lines"]=$3; tmp["commits"]=$4; tmp["attempts"]=1; tmp["time"]=gensub("/s/","","g",$5);
+   mergeStats(stageStats, tmp);
+}
+function handleStageEnd() {
+   printRecord(pass, stage, stageStats)
+   mergeStats(passStats, stageStats);
+   stage=$2;
+}
+function handlePassEnd() {
+   printRecord(pass, "*", passStats);
+   mergeStats(totalStats, passStats);
+   pass=$1;
+}
+' | column -t

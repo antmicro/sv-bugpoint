@@ -76,7 +76,7 @@ public:
   }
   static void writeHeader() {
     std::ofstream file(files::trace);
-    file << "pass\tstage\tlines_removed\tstatus\ttime\textra_info\n";
+    file << "pass\tstage\tlines_removed\tcommitted\ttime\textra_info\n";
   }
 };
 
