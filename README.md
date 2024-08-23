@@ -37,8 +37,10 @@ Output file that contains minimized code that is known to work (or rather, to br
 #### bugpoint_tmp.sv
 Temporary file to be checked with the script. It contains code with an applied removal attempt.
 
-#### bugpoint_stats
-Tab-delimited minimization statistics. For readability, it is recommeded to view it with `column -t bugpoint_stats`
+#### bugpoint_trace
+Verbose, tab-delimited trace with stats and aditional info about each removal attempt ([example](examples/caliptra_verilation_err/bugpoint_trace)).
+It can be turned into concise, high-level summary with [bugpoint_trace_summary script](scripts/bugpoint_trace_summary) ([example](examples/caliptra_verilation_err/bugpoint_trace_summarized)).
+
 
 You only need to provide `bugpoint_input.sv` and `bugpoint_check.sh` in the current working directory. After that, simply launch the `bugpoint` executable.
 
