@@ -64,7 +64,7 @@ public:
   std::string toStr() const {
     std::stringstream tmp;
     int lines = linesBefore - linesAfter;
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration << '\t' << extraInfo << "\n";
     return tmp.str();
   }

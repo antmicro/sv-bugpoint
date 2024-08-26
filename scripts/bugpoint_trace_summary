@@ -18,11 +18,11 @@ function mergeStats(lhs, rhs,     i) {
   delete rhs
 }
 function printRecord(pass, stage, stats) {
-   print pass, stage, stats["lines"], stats["commits"], stats["attempts"]-stats["commits"], stats["attempts"], stats["time"]"s";
+   secs = sprintf("%.1f", stats["millisecs"]/1000)"s"
+   print pass, stage, stats["lines"], stats["commits"], stats["attempts"]-stats["commits"], stats["attempts"], secs;
 }
 function handleAttempt() {
-   sub(/s/,"",$5); # remove time unit suffix
-   tmp["lines"]=$3; tmp["commits"]=$4; tmp["attempts"]=1; tmp["time"]=gensub("/s/","","g",$5);
+   tmp["lines"]=$3; tmp["commits"]=$4; tmp["attempts"]=1; tmp["millisecs"]=gensub("/ms/", "", "g", $5);
    mergeStats(stageStats, tmp);
 }
 function handleStageEnd() {
