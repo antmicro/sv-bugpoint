@@ -34,6 +34,10 @@ int countLines(std::string filename) {
   return count;
 }
 
+// Global counter incremented after end of each attempt
+// Meant mainly for setting up conditional breakpoints based on trace
+int currentAttemptIdx = 0;
+
 class AttemptStats {
 public:
   std::string pass;
@@ -43,7 +47,8 @@ public:
   std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
   std::chrono::time_point<std::chrono::high_resolution_clock> endTime;
   bool committed;
-  std::string extraInfo;
+  std::string typeInfo;
+  int idx;
 
   AttemptStats(std::string pass, std::string stage): pass(pass), stage(stage), committed(false)
   {}
@@ -51,6 +56,7 @@ public:
   AttemptStats& begin() {
     linesBefore = countLines(files::output);
     startTime = std::chrono::high_resolution_clock::now();
+    idx = currentAttemptIdx;
     return *this;
   }
 
@@ -58,6 +64,7 @@ public:
     this->committed = committed;
     linesAfter = countLines(files::output);
     endTime = std::chrono::high_resolution_clock::now();
+    currentAttemptIdx++;
     return *this;
   }
 
@@ -65,7 +72,7 @@ public:
     std::stringstream tmp;
     int lines = linesBefore - linesAfter;
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration << '\t' << extraInfo << "\n";
+    tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration << '\t' << idx << '\t' << typeInfo << "\n";
     return tmp.str();
   }
 
@@ -76,7 +83,7 @@ public:
   }
   static void writeHeader() {
     std::ofstream file(files::trace);
-    file << "pass\tstage\tlines_removed\tcommitted\ttime\textra_info\n";
+    file << "pass\tstage\tlines_removed\tcommitted\ttime\tidx\ttype_info\n";
   }
 };
 
@@ -111,6 +118,8 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
   // first remove nodes at least 1024 lines long, then 512, and so on
   unsigned linesUpperLimit = INT_MAX;
   unsigned linesLowerLimit = 1024;
+
+  std::string removedTypeInfo;
 
   /// Visit all child nodes
   template <typename T>
@@ -176,9 +185,15 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
   }
 
   template <typename T>
+  void logType() {
+      std::cerr << STRINGIZE_NODE_TYPE(T) << "\n";
+      removedTypeInfo = STRINGIZE_NODE_TYPE(T);
+  }
+
+  template <typename T>
   void removeNode(const T& node, bool isNodeRemovable) {
     if (shouldRemove(node, isNodeRemovable)) {
-      std::cerr << STRINGIZE_NODE_TYPE(T) << "\n";
+      logType<T>();
       std::cerr << node.toString() << "\n";
       DERIVED->remove(node);
       removed = node.sourceRange();
@@ -189,7 +204,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
   template <typename TParent, typename TChild>
   void removeChildList(const TParent& parent, const SyntaxList<TChild>& childList) {
     if (shouldRemove(childList)) {
-      std::cerr << STRINGIZE_NODE_TYPE(TParent) << "\n";
+      logType<TParent>();
       for (auto item : childList) {
         DERIVED->remove(*item);
         std::cerr << item->toString();
@@ -201,7 +216,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
   }
 
   std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree,
-                                        bool& traversalDone) {
+                                        bool& traversalDone, AttemptStats& stats) {
     // Apply one removal, and return changed tree.
     // traversalDone is set when subsequent calls to transform would not make sense
     removed = SourceRange::NoLocation;
@@ -218,10 +233,11 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
         traversalDone = true;
       } else if (removed == SourceRange::NoLocation) {
         // no node removed - retry with new limit
-        tree2 = transform(tree, traversalDone);
+        tree2 = transform(tree, traversalDone, stats);
       }
     }
 
+    stats.typeInfo = removedTypeInfo;
     return tree2;
   }
 
@@ -430,18 +446,21 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
  public:
     std::vector<std::pair<SourceRange, SourceRange>> pairs;
     std::pair<SourceRange, SourceRange> searchedPair;
+    std::string removedTypeInfo;
 
     PairRemover(std::vector<std::pair<SourceRange, SourceRange>>&& pairs): pairs(pairs) {}
 
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree,
-                                          bool& traversalDone) {
+                                          bool& traversalDone, AttemptStats& stats) {
       if(pairs.empty()) {
         traversalDone = true;
         return tree;
       }
       searchedPair = pairs.back();
       pairs.pop_back();
+      removedTypeInfo = "";
       auto tree2 = SyntaxRewriter<PairRemover>::transform(tree);
+      stats.typeInfo = removedTypeInfo;
       // maybe do it in while(not changed) loop
       traversalDone = pairs.empty();
       return tree2;
@@ -459,10 +478,16 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
   }
 
   template <typename T>
+  void logType() {
+      std::cerr << STRINGIZE_NODE_TYPE(T) << "\n";
+      removedTypeInfo += (removedTypeInfo.empty() ? "" : ",") + STRINGIZE_NODE_TYPE(T);
+  }
+
+  template <typename T>
   void visit(T&& node, bool isNodeRemovable = true) {
       bool found = node.sourceRange() == searchedPair.first || node.sourceRange() == searchedPair.second;
       if(isNodeRemovable && found && node.sourceRange() != SourceRange::NoLocation) {
-        std::cerr << STRINGIZE_NODE_TYPE(T) << "\n";
+        logType<T>();
         std::cerr << node.toString() << "\n";
         remove(node);
       }
@@ -572,7 +597,7 @@ bool removeLoop(OneTimeRemover<T> rewriter,
 
   while (!traversalDone) {
     auto stats = AttemptStats(passIdx, stageName);;
-    auto tmpTree = rewriter.transform(tree, traversalDone);
+    auto tmpTree = rewriter.transform(tree, traversalDone, stats);
     if (traversalDone && tmpTree == tree) {
       break;  // no change - no reason to test
     }
@@ -596,7 +621,7 @@ bool removeLoop(PairRemover rewriter,
 
   while (!traversalDone) {
     auto stats = AttemptStats(passIdx, stageName);
-    auto tmpTree = rewriter.transform(tree, traversalDone);
+    auto tmpTree = rewriter.transform(tree, traversalDone, stats);
     if (traversalDone && tmpTree == tree) {
       break;  // no change - no reason to test
     }
