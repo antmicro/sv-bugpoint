@@ -27,11 +27,8 @@ const std::string trace = "./bugpoint_trace";
 }  // namespace files
 
 int countLines(std::string filename) {
-  int count = 0;
   std::ifstream file(filename);
-  for (std::string line; std::getline(file, line); ++count) {
-  }  // probably not a smartest way, but should be fine
-  return count;
+  return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');;
 }
 
 // Global counter incremented after end of each attempt
