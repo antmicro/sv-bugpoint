@@ -106,3 +106,10 @@ class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
       visitDefault(node);
   }
 };
+
+inline std::string toString(SourceRange sourceRange) {
+    if(sourceRange == SourceRange::NoLocation) return "NO_LOCATION";
+    else return "buffer:" + std::to_string(sourceRange.start().buffer().getId()) +
+                ", offsetStart: " + std::to_string(sourceRange.start().offset()) +
+                ", offsetEnd: " + std::to_string(sourceRange.end().offset());
+}
