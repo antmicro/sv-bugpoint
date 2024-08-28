@@ -6,12 +6,14 @@
 #include <slang/syntax/SyntaxVisitor.h>
 #include <slang/text/SourceLocation.h>
 #include <slang/text/SourceManager.h>
+#include <slang/ast/symbols/PortSymbols.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <unordered_set>
 #include "debug.hpp"
 
 using namespace slang::syntax;
@@ -536,6 +538,19 @@ PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
     return PairRemover(std::move(mapper.pairs));
 }
 
+namespace std {
+// NOTE: maybe upstream it in slang?
+template<>
+struct hash<slang::SourceRange> {
+    size_t operator()(const slang::SourceRange& obj) const {
+        size_t seed = 0;
+        slang::hash_combine(seed, obj.start());
+        slang::hash_combine(seed, obj.end());
+        return seed;
+    }
+};
+} // namespace std
+
 class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
   // build vector of port pairs (defLocation, useLocation)
   public:
@@ -574,18 +589,23 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
         }
     };
 
+    SourceRange getPortDefLoc(const Symbol* port) {
+      if(port && port->getSyntax() && port->getSyntax()->parent) {
+        return port->getSyntax()->parent->sourceRange();
+      } else {
+        return SourceRange::NoLocation;
+      }
+    }
+
     std::vector<std::pair<SourceRange, SourceRange>> pairs;
     void handle(const InstanceSymbol& instance) {
+      std::unordered_set<SourceRange> connectedPortDefs;
       for(auto conn: instance.getPortConnections()) {
         if(!conn)
           continue;
 
-        SourceRange defLocation = SourceRange::NoLocation;
+        SourceRange defLocation = getPortDefLoc(&conn->port);
         SourceRange useLocation = SourceRange::NoLocation;
-
-        if(conn->port.getSyntax()) {
-          defLocation = conn->port.getSyntax()->parent->sourceRange();
-        }
 
         if(instance.getSyntax()) {
           FindConnectionSyntax finder(conn);
@@ -595,6 +615,16 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
 
         if(defLocation != SourceRange::NoLocation || useLocation != SourceRange::NoLocation) {
           pairs.push_back({defLocation, useLocation});
+        }
+        if(defLocation != SourceRange::NoLocation) {
+          connectedPortDefs.emplace(defLocation);
+        }
+      }
+
+      for(auto port: instance.body.getPortList()) {
+        SourceRange defLocation = getPortDefLoc(port);
+        if(defLocation != SourceRange::NoLocation && !connectedPortDefs.contains(defLocation)) {
+          pairs.push_back({defLocation, SourceRange::NoLocation});
         }
       }
       visitDefault(instance);
