@@ -15,18 +15,17 @@ cmake --build build -j8
 
 Dependencies should be fetched and built automatically.
 Bugpoint executable is placed in `build/bugpoint`.
+If you are going to use accompanying scripts, it is recommended to add whole `scripts/` dir
+to your path, since some scripts may depend on each other.
 
 ## Usage
 Bugpoint reads or writes the following files in the current working directory:
 #### bugpoint_input.sv
-Input code that bugpoint will try to minimize.
-In order to get one from a multifile design, you can preprocess it by
-replacing `--cc` or `--binary` flags in the Verilator invocation you use
-with `-E -P` (`-P` is optional, but makes output more concise) and
-redirecting stdout to `bugpoint_input.sv`.
+Input code that bugpoint will try to minimize. In order to get one from a multifile design,
+you can use preprocessor of your choice (e.g `verilator -E -P inputs_and_other_flags... > bugpoint_input.sv`)
 
 #### bugpoint_check.sh
-Script that takes the path to a SystemVerilog file as the first argument and tests it with Verilator.
+Script that takes the path to a SystemVerilog file as the first argument and asserts that the same bug occurred.
 It should exit with 0 if the same bug or error message is encountered and non-zero otherwise.
 For inspiration see [examples/caliptra_verilation_err/bugpoint_check.sh](examples/caliptra_verilation_err/bugpoint_check.sh)
 and [examples/caliptra_vcd/bugpoint_check.sh](examples/caliptra_vcd/bugpoint_check.sh).
@@ -44,6 +43,22 @@ It can be turned into concise, high-level summary with [bugpoint_trace_summary s
 
 You only need to provide `bugpoint_input.sv` and `bugpoint_check.sh` in the current working directory. After that, simply launch the `bugpoint` executable.
 
-**NOTE:** This workflow is not the most convenient one, and is guaranteed to change in future.
-Ideally, Bugpoint would create preprocessed code itself, and not require to write check
-scripts for common types of failures.
+### bugpoint_verilator_gen script
+In case of Verilator workflows, there is [bugpoint_verilator_gen script](scripts/bugpoint_verilator_gen) for automatically generating `bugpoint_input.sv` and template of `bugpoint_check.sv`
+#### Usage
+Run `bugpoint_verilator_gen --init`, and then run each command needed for bug reproduction with `bugpoint_verilator_gen` prepended. For example:
+```sh
+bugpoint_verilator_gen --init
+bugpoint_verilator_gen verilator --cc -CFLAGS "-std=c++17" ...
+bugpoint_verilator_gen make -C obj_dir/ -j ...
+bugpoint_verilator_gen ./obj_dir/Vsim
+```
+
+The script attempts to:
+- Produce an input file for sv-bugpoint with preprocessed code.
+- Produce a template of the check script with:
+  - a Verilator invocation adjusted to use the preprocessed source,
+  - Other required commands copied (and extended with `|| exit $?` if feasible),
+  - An example assertion for a simple failure case.
+
+Script works on a best-effort basis, and it is expected that the script it produces will require some manual adjustments.

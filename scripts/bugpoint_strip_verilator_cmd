@@ -1,0 +1,15 @@
+#!/bin/bash
+# expand references to argument files and remove references to Verilog and "waiver files"
+# to make command ready for building preprocessed source.
+PARSE_ARG_FILE=0
+for i in "$@"; do
+  if [[ "$PARSE_ARG_FILE" -ne 0 ]]; then
+    PARSE_ARG_FILE=0
+    [[ "$i" == *".vlt" ]] && continue # "waiver files" are already integrated in preprocessed source
+    xargs bugpoint_strip_verilator_cmd < "$i"
+  elif [[ "$i" == "-f" ]]; then
+    PARSE_ARG_FILE=1
+  else
+    grep -v -q '\(.vf$\|.sv$\|.v$\|.vh$\|.vlt$\|+incdir+\)' <<< "$i" && printf '%q \\\n ' "$i"
+  fi
+done
