@@ -1,0 +1,4 @@
+#!/bin/sh
+# strip volatile metadata like filenames, filelines and redundant whitespace
+# from verilator errmsg so it can be reliably compared
+sed 's/[a-z_-]*.sv//g' | sed 's/:[0-9]*//g' | sed 's/[0-9]* |//g' | sed 's/[\t\n ]\+/ /g'
