@@ -538,19 +538,6 @@ PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
     return PairRemover(std::move(mapper.pairs));
 }
 
-namespace std {
-// NOTE: maybe upstream it in slang?
-template<>
-struct hash<slang::SourceRange> {
-    size_t operator()(const slang::SourceRange& obj) const {
-        size_t seed = 0;
-        slang::hash_combine(seed, obj.start());
-        slang::hash_combine(seed, obj.end());
-        return seed;
-    }
-};
-} // namespace std
-
 class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
   // build vector of port pairs (defLocation, useLocation)
   public:
