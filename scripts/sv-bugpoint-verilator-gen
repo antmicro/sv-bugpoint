@@ -1,0 +1,58 @@
+#!/bin/bash
+# best-effort script for auto generating sv-bugpoint-input.sv and template sv-bugpoint-check.sh
+# usage:
+# 1) issue sv-bugpoint-verilator-gen --init
+# 2) prepend and run each command needed for bug replication with sv-bugpoint-verilator-gen
+
+quote_cmd() {
+  for i in "$@"; do
+     printf '%q ' "$i"
+  done
+}
+
+record_generic_cmd() {
+  quote_cmd "$@" >> sv-bugpoint-check.sh
+  "$@"
+  EXIT_CODE="$?"
+  if [ "$EXIT_CODE" -eq 0 ]; then
+    printf "|| exit \$?\n" >> sv-bugpoint-check.sh
+  else
+    printf "\n" >> sv-bugpoint-check.sh
+  fi
+}
+
+record_verilator() {
+  # preprocess
+  "$@" -E -P > sv-bugpoint-input.sv
+  # make invocation for building preprocessed file
+  STRIPPED_CMD=$(sv-bugpoint-strip-verilator-cmd "$@")"\$1"
+  # run original cmd, and capture stderr
+  STDERR=$("$@" 2>&1 1>/dev/null)
+  EXIT_CODE="$?"
+
+  if [ "$EXIT_CODE" -eq 0 ]; then
+    printf "%s 2>/dev/null || exit \$?\n" "$STRIPPED_CMD" >> sv-bugpoint-check.sh
+  else # build failed, create assert on stderr
+    printf "%s\n" "$STDERR" | sv-bugpoint-strip-verilator-errmsg > golden_stderr
+    cat >>sv-bugpoint-check.sh <<EOF
+$STRIPPED_CMD 2>&1 1>/dev/null | sv-bugpoint-strip-verilator-errmsg > actual_stderr
+
+printf "\n\n\n"
+diff golden_stderr actual_stderr --color && printf "SUCCESS\n\n\n"
+EXIT_CODE=\$?
+
+[ -n "\$GOLDEN" ] && cp actual_stderr golden_stderr
+
+exit "\$EXIT_CODE"
+EOF
+  fi
+}
+
+if [ "$1" = "--init" ]; then
+  printf "#!/bin/sh\n" > sv-bugpoint-check.sh
+  chmod +x sv-bugpoint-check.sh
+elif [ "$(basename "$1")" = "verilator" ]; then
+  record_verilator "$@"
+else
+  record_generic_cmd "$@"
+fi

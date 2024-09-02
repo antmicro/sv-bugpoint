@@ -6,7 +6,7 @@
 
 verilator --cc --autoflush --timescale 1ns/1ps --timing --top-module caliptra_top_tb "$1" \
   -Wno-WIDTH -Wno-UNOPTFLAT -Wno-LITENDIAN -Wno-CMPCONST -Wno-MULTIDRIVEN -Wno-UNPACKED -Wno-ALWCOMBORDER \
-  2>&1 >/dev/null | bugpoint_strip_verilator_errmsg > actual_stderr
+  2>&1 >/dev/null | sv-bugpoint-strip-verilator-errmsg > actual_stderr
 
 printf "\n\n\n"
 diff golden_stderr actual_stderr --color && printf "SUCCESS\n\n\n"

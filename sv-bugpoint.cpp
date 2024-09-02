@@ -21,11 +21,11 @@ using namespace slang::ast;
 using namespace slang;
 
 namespace files {
-const std::string input = "./bugpoint_input.sv";
-const std::string output = "./bugpoint_minimized.sv";
-const std::string tmpOutput = "./bugpoint_tmp.sv";
-const std::string checkScript = "./bugpoint_check.sh";
-const std::string trace = "./bugpoint_trace";
+const std::string input = "./sv-bugpoint-input.sv";
+const std::string output = "./sv-bugpoint-minimized.sv";
+const std::string tmpOutput = "./sv-bugpoint-tmp.sv";
+const std::string checkScript = "./sv-bugpoint-check.sh";
+const std::string trace = "./sv-bugpoint-trace";
 }  // namespace files
 
 int countLines(std::string filename) {
@@ -628,7 +628,7 @@ PairRemover makePortsRemover(std::shared_ptr<SyntaxTree>& tree) {
 }
 
 bool test(AttemptStats& stats) {
-  // Execute ./bugpoint_check.sh tmpFile.
+  // Execute ./sv-bugpoint-check.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
   // On fail (non-zero exit code) return false.
   stats.begin();
@@ -639,7 +639,7 @@ bool test(AttemptStats& stats) {
   } else if (pid == 0) {  // we are inside child
     const char* const argv[] = {files::checkScript.c_str(), files::tmpOutput.c_str(), NULL};
     if (execvp(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
-      std::string err = "bugpoint: failed to lanuch " + files::checkScript;
+      std::string err = "sv-bugpoint: failed to lanuch " + files::checkScript;
       perror(err.c_str());
       kill(getppid(), SIGINT); // terminate parent
       exit(1);
@@ -666,7 +666,7 @@ bool test(AttemptStats& stats) {
 }
 
 bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info) {
-  // Write given tree to tmp file and execute ./bugpoint_check.sh tmpFile.
+  // Write given tree to tmp file and execute ./sv-bugpoint-check.sh tmpFile.
   std::ofstream tmpFile;
   tmpFile.rdbuf()->pubsetbuf(
       0, 0);  // Enable unbuffered io. Has to be called before open to be effective
@@ -748,7 +748,7 @@ void inspect() {
     AllPrinter printer(2);
     printer.visit(tree->root());
   } else {
-    std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+    std::cerr << "sv-bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
     exit(1);
   }
 }
@@ -763,7 +763,7 @@ void inspectAST() {
     AstPrinter printer;
     printer.visit(compilation.getRoot());
   } else {
-    std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+    std::cerr << "sv-bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
     exit(1);
   }
 }
@@ -786,7 +786,7 @@ void minimize() {
     std::filesystem::copy(files::input, files::output,
                           std::filesystem::copy_options::overwrite_existing);
   } catch(const std::filesystem::filesystem_error& err) {
-    std::cerr << "bugpoint: failed to copy " << files::input << ": " << err.code().message() << "\n";
+    std::cerr << "sv-bugpoint: failed to copy " << files::input << ": " << err.code().message() << "\n";
     exit(1);
   }
   AttemptStats::writeHeader();
@@ -804,7 +804,7 @@ void minimize() {
     } while (committed);
 
   } else {
-      std::cerr << "bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+      std::cerr << "sv-bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
       exit(1);
   }
 }

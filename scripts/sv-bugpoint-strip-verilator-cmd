@@ -6,7 +6,7 @@ for i in "$@"; do
   if [[ "$PARSE_ARG_FILE" -ne 0 ]]; then
     PARSE_ARG_FILE=0
     [[ "$i" == *".vlt" ]] && continue # "waiver files" are already integrated in preprocessed source
-    xargs bugpoint_strip_verilator_cmd < "$i"
+    xargs sv-bugpoint-strip-verilator-cmd < "$i"
   elif [[ "$i" == "-f" ]]; then
     PARSE_ARG_FILE=1
   else

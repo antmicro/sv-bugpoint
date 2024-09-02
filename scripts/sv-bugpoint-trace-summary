@@ -1,5 +1,5 @@
 #!/bin/sh
-# create concise minimization summary from bugpoint_trace provided on stdin
+# create concise minimization summary from sv-bugpoint-trace provided on stdin
 awk '
 NR==1{
   FS=OFS="\t"
