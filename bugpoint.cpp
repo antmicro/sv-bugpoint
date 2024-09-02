@@ -628,7 +628,7 @@ PairRemover makePortsRemover(std::shared_ptr<SyntaxTree>& tree) {
 }
 
 bool test(AttemptStats& stats) {
-  // Execute ./test.sh tmpFile.
+  // Execute ./bugpoint_check.sh tmpFile.
   // On success (zero exit code) replace minimized file with tmp, and return true.
   // On fail (non-zero exit code) return false.
   stats.begin();
@@ -666,7 +666,7 @@ bool test(AttemptStats& stats) {
 }
 
 bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info) {
-  // Write given tree to tmp file and execute ./test.sh tmpFile.
+  // Write given tree to tmp file and execute ./bugpoint_check.sh tmpFile.
   std::ofstream tmpFile;
   tmpFile.rdbuf()->pubsetbuf(
       0, 0);  // Enable unbuffered io. Has to be called before open to be effective
