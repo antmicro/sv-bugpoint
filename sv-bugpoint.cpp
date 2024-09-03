@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <chrono>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -20,13 +21,26 @@ using namespace slang::syntax;
 using namespace slang::ast;
 using namespace slang;
 
-namespace files {
-const std::string input = "./sv-bugpoint-input.sv";
-const std::string output = "./sv-bugpoint-minimized.sv";
-const std::string tmpOutput = "./sv-bugpoint-tmp.sv";
-const std::string checkScript = "./sv-bugpoint-check.sh";
-const std::string trace = "./sv-bugpoint-trace";
-}  // namespace files
+struct Paths {
+  std::string outDir;
+  std::string checkScript;
+  std::string input;
+  std::string output;
+  std::string tmpOutput;
+  std::string trace;
+  std::string dumpSyntax;
+  std::string dumpAst;
+  Paths() {}
+  Paths(std::string outDir, std::string checkScript, std::string input): outDir(outDir), input(input), checkScript(checkScript) {
+    output = outDir + "/sv-bugpoint-minimized.sv";
+    tmpOutput = outDir + "/sv-bugpoint-tmp.sv";
+    trace = outDir + "/sv-bugpoint-trace";
+    dumpSyntax = outDir + "/sv-bugpoint-dump-syntax";
+    dumpAst = outDir + "/sv-bugpoint-dump-ast";
+  }
+};
+
+Paths paths;
 
 int countLines(std::string filename) {
   std::ifstream file(filename);
@@ -53,7 +67,7 @@ public:
   {}
 
   AttemptStats& begin() {
-    linesBefore = countLines(files::output);
+    linesBefore = countLines(paths.output);
     startTime = std::chrono::high_resolution_clock::now();
     idx = currentAttemptIdx;
     return *this;
@@ -61,7 +75,7 @@ public:
 
   AttemptStats& end(bool committed) {
     this->committed = committed;
-    linesAfter = countLines(files::output);
+    linesAfter = countLines(paths.output);
     endTime = std::chrono::high_resolution_clock::now();
     currentAttemptIdx++;
     return *this;
@@ -77,11 +91,11 @@ public:
 
   void report() {
     std::cerr << toStr();
-    std::ofstream file(files::trace, std::ios_base::app);
+    std::ofstream file(paths.trace, std::ios_base::app);
     file << toStr() << std::flush;
   }
   static void writeHeader() {
-    std::ofstream file(files::trace);
+    std::ofstream file(paths.trace);
     file << "pass\tstage\tlines_removed\tcommitted\ttime\tidx\ttype_info\n";
   }
 };
@@ -637,9 +651,9 @@ bool test(AttemptStats& stats) {
     perror("fork failed");
     exit(1);
   } else if (pid == 0) {  // we are inside child
-    const char* const argv[] = {files::checkScript.c_str(), files::tmpOutput.c_str(), NULL};
+    const char* const argv[] = {paths.checkScript.c_str(), paths.tmpOutput.c_str(), NULL};
     if (execvp(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
-      std::string err = "sv-bugpoint: failed to lanuch " + files::checkScript;
+      std::string err = "sv-bugpoint: failed to lanuch " + paths.checkScript;
       perror(err.c_str());
       kill(getppid(), SIGINT); // terminate parent
       exit(1);
@@ -655,7 +669,7 @@ bool test(AttemptStats& stats) {
       stats.end(false).report();
       return false;
     } else {
-      std::filesystem::copy(files::tmpOutput, files::output,
+      std::filesystem::copy(paths.tmpOutput, paths.output,
                             std::filesystem::copy_options::overwrite_existing);
       stats.end(true).report();
       return true;
@@ -670,7 +684,7 @@ bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info) {
   std::ofstream tmpFile;
   tmpFile.rdbuf()->pubsetbuf(
       0, 0);  // Enable unbuffered io. Has to be called before open to be effective
-  tmpFile.open(files::tmpOutput);
+  tmpFile.open(paths.tmpOutput);
   tmpFile << SyntaxPrinter::printFile(*tree);
   return test(info);
 }
@@ -741,37 +755,29 @@ bool pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
   return commited;
 }
 
-void inspect() {
-  auto treeOrErr = SyntaxTree::fromFile(files::input);
+void dumpTrees() {
+  auto treeOrErr = SyntaxTree::fromFile(paths.input);
   if (treeOrErr) {
     auto tree = *treeOrErr;
-    AllPrinter printer(2);
-    printer.visit(tree->root());
-  } else {
-    std::cerr << "sv-bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
-    exit(1);
-  }
-}
 
-void inspectAST() {
-  auto treeOrErr = SyntaxTree::fromFile(files::input);
-  if (treeOrErr) {
-    auto tree = *treeOrErr;
+    std::ofstream syntaxDumpFile(paths.dumpSyntax), astDumpFile(paths.dumpAst);
+    AllSyntaxPrinter(2, syntaxDumpFile).visit(tree->root());
+
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics(); // kludge for launching full elaboration
-    AstPrinter printer;
-    printer.visit(compilation.getRoot());
+
+    AstPrinter(astDumpFile).visit(compilation.getRoot());
   } else {
-    std::cerr << "sv-bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+    std::cerr << "sv-bugpoint: failed to load " << paths.input << " file "<< treeOrErr.error().second << "\n";
     exit(1);
   }
 }
 
 bool removeVerilatorConfig() {
   auto info = AttemptStats("-", "verilatorConfigRemover");
-  std::ifstream inputFile(files::input);
-  std::ofstream testFile(files::tmpOutput);
+  std::ifstream inputFile(paths.input);
+  std::ofstream testFile(paths.tmpOutput);
   std::string line;
   while (std::getline(inputFile, line) && line != "`verilator_config") {
     testFile << line << "\n";
@@ -782,17 +788,9 @@ bool removeVerilatorConfig() {
 }
 
 void minimize() {
-  try {
-    std::filesystem::copy(files::input, files::output,
-                          std::filesystem::copy_options::overwrite_existing);
-  } catch(const std::filesystem::filesystem_error& err) {
-    std::cerr << "sv-bugpoint: failed to copy " << files::input << ": " << err.code().message() << "\n";
-    exit(1);
-  }
-  AttemptStats::writeHeader();
   removeVerilatorConfig();
 
-  auto treeOrErr = SyntaxTree::fromFile(files::output);
+  auto treeOrErr = SyntaxTree::fromFile(paths.output);
 
   if (treeOrErr) {
     auto tree = *treeOrErr;
@@ -804,13 +802,67 @@ void minimize() {
     } while (committed);
 
   } else {
-      std::cerr << "sv-bugpoint: failed to load " << files::input << " file "<< treeOrErr.error().second << "\n";
+      std::cerr << "sv-bugpoint: failed to load " << paths.input << " file "<< treeOrErr.error().second << "\n";
       exit(1);
   }
 }
 
-int main() {
-  // inspect();
-  // inspectAST();
+void initOutDir(bool force) {
+  std::filesystem::create_directory(paths.outDir);
+  if(!std::filesystem::is_empty(paths.outDir) && !force) {
+    std::cerr << paths.outDir << " is not empty directory. Continue? [Y/n] ";
+    int ch = std::cin.get();
+    if(ch != '\n' && ch != 'Y' && ch != 'y') {
+      exit(0);
+    }
+  }
+
+  try {
+    std::filesystem::copy(paths.input, paths.output,
+                          std::filesystem::copy_options::overwrite_existing);
+  } catch(const std::filesystem::filesystem_error& err) {
+    std::cerr << "sv-bugpoint: failed to copy " << paths.input << ": " << err.code().message() << "\n";
+    exit(1);
+  }
+
+  AttemptStats::writeHeader();
+}
+
+void usage() {
+  std::cerr << "Usage: sv-bugpoint [options] outDir/ ./checkscript.sh input.sv\n";
+  std::cerr << "Options:\n";
+  std::cerr << " --force: overwrite files in outDir without prompting\n";
+  std::cerr << " --dump-trees: dump parse tree and elaborated AST of input code\n";
+}
+
+int main(int argc, char** argv) {
+  bool dump = false;
+  bool force = false;
+  std::vector<std::string> positionalArgs;
+  for(int i = 1; i<argc; ++i) {
+    if(strcmp(argv[i], "--help") == 0) {
+      usage();
+      exit(0);
+    } else if(strcmp(argv[i], "--force") == 0) {
+      force = true;
+    } else if(strcmp(argv[i], "--dump-trees") == 0) {
+      dump = true;
+    } else {
+      positionalArgs.push_back(argv[i]);
+    }
+  }
+
+  if(positionalArgs.size() != 3) {
+    usage();
+    exit(1);
+  }
+
+  paths = Paths(positionalArgs[0], positionalArgs[1], positionalArgs[2]);
+  initOutDir(force);
+
+  if(dump) {
+    dumpTrees();
+  }
+
   minimize();
 }

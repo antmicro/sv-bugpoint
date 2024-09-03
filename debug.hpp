@@ -52,15 +52,16 @@ class TreePrinter: public SyntaxVisitor<TDerived> {
   private:
     int indentLevel;
     int minLinesFilter;
+    std::ostream& out;
   public:
 
-  TreePrinter(int minLinesFilter = 0) {
+  TreePrinter(int minLinesFilter = 0, std::ostream& out=std::cout): out(out) {
     indentLevel = 0;
     this->minLinesFilter = minLinesFilter;
   }
 
   void printIndent() {
-    for(int i = 0; i<indentLevel; ++i) std::cout<<" ";
+    for(int i = 0; i<indentLevel; ++i) out<<" ";
   }
 
   template<typename T>
@@ -69,8 +70,8 @@ class TreePrinter: public SyntaxVisitor<TDerived> {
       if(lines >= minLinesFilter) {
         indentLevel++;
         printIndent();
-        std::cout << STRINGIZE_NODE_TYPE(T) << ", " << node.kind << ", lines: " << lines << "\n";
-        std::cout << node.toString() << "\n";
+        out << STRINGIZE_NODE_TYPE(T) << ", " << node.kind << ", lines: " << lines << "\n";
+        out << node.toString() << "\n";
         DERIVED->visitDefault(node);
         indentLevel--;
       } else {
@@ -79,16 +80,20 @@ class TreePrinter: public SyntaxVisitor<TDerived> {
   }
 };
 
-class AllPrinter: public TreePrinter<AllPrinter> {
+class AllSyntaxPrinter: public TreePrinter<AllSyntaxPrinter> {
   public:
+  AllSyntaxPrinter(int minLinesFilter = 0, std::ostream& out=std::cout): TreePrinter<AllSyntaxPrinter>(minLinesFilter, out) { }
+
   template<typename T>
   void handle(const T& node) {
     tryPrintNode(node);
   }
 };
 
-class StatementPrinter: public TreePrinter<StatementPrinter> {
+class StatementSyntaxPrinter: public TreePrinter<StatementSyntaxPrinter> {
   public:
+  StatementSyntaxPrinter(int minLinesFilter = 0, std::ostream& out=std::cout): TreePrinter<StatementSyntaxPrinter>(minLinesFilter, out) { }
+
   void handle(const StatementSyntax& node) {
     tryPrintNode(node);
   }
@@ -96,12 +101,16 @@ class StatementPrinter: public TreePrinter<StatementPrinter> {
 
 
 class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
+  private:
+      std::ostream& out;
   public:
+      AstPrinter(std::ostream& out=std::cout): out(out) { }
+
       template <typename T>
       void handle(const T& node) {
-      std::cerr <<"node: " << STRINGIZE_NODE_TYPE(T) << " " << toString(node.kind) << " "<< "\n";
+      out << "node: " << STRINGIZE_NODE_TYPE(T) << " " << toString(node.kind) << " "<< "\n";
       if constexpr (requires { node.getSyntax(); }) {
-        if(node.getSyntax()) std::cerr << node.getSyntax()->toString() << "\n";
+        if(node.getSyntax()) out << node.getSyntax()->toString() << "\n";
       }
       visitDefault(node);
   }
