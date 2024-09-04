@@ -51,7 +51,7 @@ EOF
 if [ "$1" = "--init" ]; then
   printf "#!/bin/sh\n" > bugpoint_check.sh
   chmod +x bugpoint_check.sh
-elif [ "$1" = "verilator" ]; then
+elif [ "$(basename "$1")" = "verilator" ]; then
   record_verilator "$@"
 else
   record_generic_cmd "$@"
