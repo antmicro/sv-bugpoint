@@ -54,7 +54,16 @@ void copyFile(std::string from, std::string to) {
     std::filesystem::copy(from, to,
                           std::filesystem::copy_options::overwrite_existing);
   } catch(const std::filesystem::filesystem_error& err) {
-    std::cerr << "sv-bugpoint: failed to copy " << paths.input << ": " << err.code().message() << "\n";
+    std::cerr << "sv-bugpoint: failed to copy " << from << "to" << to << ": " << err.code().message() << "\n";
+    exit(1);
+  }
+}
+
+void mkdir(std::string path) {
+  try {
+    std::filesystem::create_directory(path);
+  } catch(const std::filesystem::filesystem_error& err) {
+    std::cerr << "sv-bugpoint: failed to make directory " << path << ": " << err.code().message() << "\n";
     exit(1);
   }
 }
@@ -824,7 +833,7 @@ void minimize() {
 }
 
 void initOutDir(bool force) {
-  std::filesystem::create_directory(paths.outDir);
+  mkdir(paths.outDir);
   if(!std::filesystem::is_empty(paths.outDir) && !force) {
     std::cerr << paths.outDir << " is not empty directory. Continue? [Y/n] ";
     int ch = std::cin.get();
@@ -832,7 +841,7 @@ void initOutDir(bool force) {
       exit(0);
     }
   }
-  if (saveIntermediates) std::filesystem::create_directory(paths.intermediateDir);
+  if (saveIntermediates) mkdir(paths.intermediateDir);
   // NOTE: not removing old files may be kind of misleading (espacially with intermediate dir)
   // maybe add some kind of purge?
   copyFile(paths.input, paths.output);
