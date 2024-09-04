@@ -19,32 +19,28 @@ If you are going to use accompanying scripts, it is recommended to add whole `sc
 to your path, since some scripts may depend on each other.
 
 ## Usage
-sv-bugpoint reads or writes the following files in the current working directory:
-#### sv-bugpoint-input.sv
-Input code that sv-bugpoint will try to minimize. In order to get one from a multifile design,
-you can use preprocessor of your choice (e.g `verilator -E -P inputs_and_other_flags... > sv-bugpoint-input.sv`)
-
-#### sv-bugpoint-check.sh
-Script that takes the path to a SystemVerilog file as the first argument and asserts that the same bug occurred.
+You have to prepare:
+- Script that takes the path to a SystemVerilog file as the first argument and asserts that the same bug occurred.
 It should exit with 0 if the same bug or error message is encountered and non-zero otherwise.
 For inspiration see [examples/caliptra_verilation_err/sv-bugpoint-check.sh](examples/caliptra_verilation_err/sv-bugpoint-check.sh)
 and [examples/caliptra_vcd/sv-bugpoint-check.sh](examples/caliptra_vcd/sv-bugpoint-check.sh).
+- Input code that sv-bugpoint will try to minimize. In order to get one from a multifile design,
+you can use preprocessor of your choice (e.g `verilator -E -P inputs_and_other_flags... > sv-bugpoint-input.sv`)
 
-#### sv-bugpoint-minimized.sv
-Output file that contains minimized code that is known to work (or rather, to break in expected way).
+After that, simply launch `sv-bugpoint outDir/ ./checkscript.sh input.sv`.
 
-#### sv-bugpoint-tmp.sv
-Temporary file to be checked with the script. It contains code with an applied removal attempt.
+output directory will be populated with:
+- `sv-bugpoint-minimized.sv` - output file that contains minimized code that is known to work (or rather, to break in expected way).
+- `sv-bugpoint-tmp.sv` - temporary file to be checked with the script. It contains code with an applied removal attempt.
+- `sv-bugpoint-trace` - verbose, tab-delimited trace with stats and aditional info about each removal attempt ([example](examples/caliptra_verilation_err/sv-bugpoint-trace)).
+  It can be turned into concise, high-level summary with [sv-bugpoint-trace_summary script](scripts/sv-bugpoint-trace_summary) ([example](examples/caliptra_verilation_err/sv-bugpoint-trace_summarized)).
 
-#### sv-bugpoint-trace
-Verbose, tab-delimited trace with stats and aditional info about each removal attempt ([example](examples/caliptra_verilation_err/sv-bugpoint-trace)).
-It can be turned into concise, high-level summary with [sv-bugpoint-trace-summary script](scripts/sv-bugpoint-trace-summary) ([example](examples/caliptra_verilation_err/sv-bugpoint-trace-summarized)).
-
-
-You only need to provide `sv-bugpoint-input.sv` and `sv-bugpoint-check.sh` in the current working directory. After that, simply launch the `sv-bugpoint` executable.
+Flags may enable dumping additional files:
+- `--save-intermediates` saves each removal attempt in `outDir/intermediates/attempt<index>.sv`.
+- `--dump-trees` saves dumps of slang's parse tree/ast.
 
 ### sv-bugpoint-verilator-gen script
-In case of Verilator workflows, there is [sv-bugpoint-verilator-gen script](scripts/sv-bugpoint-verilator-gen) for automatically generating `sv-bugpoint-input.sv` and template of `sv-bugpoint-check.sv`
+In case of Verilator workflows, there is [sv-bugpoint-verilator-gen script](scripts/sv-bugpoint-verilator-gen) for automatically generating input and template of check script
 #### Usage
 Run `sv-bugpoint-verilator-gen --init`, and then run each command needed for bug reproduction with `sv-bugpoint-verilator-gen` prepended. For example:
 ```sh
