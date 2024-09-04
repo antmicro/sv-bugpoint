@@ -30,6 +30,7 @@ struct Paths {
   std::string trace;
   std::string dumpSyntax;
   std::string dumpAst;
+  std::string intermediateDir;
   Paths() {}
   Paths(std::string outDir, std::string checkScript, std::string input): outDir(outDir), input(input), checkScript(checkScript) {
     output = outDir + "/sv-bugpoint-minimized.sv";
@@ -37,19 +38,31 @@ struct Paths {
     trace = outDir + "/sv-bugpoint-trace";
     dumpSyntax = outDir + "/sv-bugpoint-dump-syntax";
     dumpAst = outDir + "/sv-bugpoint-dump-ast";
+    intermediateDir = outDir + "/intermediates/";
   }
 };
 
 Paths paths;
+// Flag for saving intermediate output of each attempt
+bool saveIntermediates = false;
+// Global counter incremented after end of each attempt
+// Meant mainly for setting up conditional breakpoints based on trace
+int currentAttemptIdx = 0;
+
+void copyFile(std::string from, std::string to) {
+  try {
+    std::filesystem::copy(from, to,
+                          std::filesystem::copy_options::overwrite_existing);
+  } catch(const std::filesystem::filesystem_error& err) {
+    std::cerr << "sv-bugpoint: failed to copy " << paths.input << ": " << err.code().message() << "\n";
+    exit(1);
+  }
+}
 
 int countLines(std::string filename) {
   std::ifstream file(filename);
   return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');;
 }
-
-// Global counter incremented after end of each attempt
-// Meant mainly for setting up conditional breakpoints based on trace
-int currentAttemptIdx = 0;
 
 class AttemptStats {
 public:
@@ -77,6 +90,9 @@ public:
     this->committed = committed;
     linesAfter = countLines(paths.output);
     endTime = std::chrono::high_resolution_clock::now();
+    if (saveIntermediates) {
+      copyFile(paths.tmpOutput, std::format("{}/attempt{}.sv", paths.intermediateDir, currentAttemptIdx));
+    }
     currentAttemptIdx++;
     return *this;
   }
@@ -816,15 +832,10 @@ void initOutDir(bool force) {
       exit(0);
     }
   }
-
-  try {
-    std::filesystem::copy(paths.input, paths.output,
-                          std::filesystem::copy_options::overwrite_existing);
-  } catch(const std::filesystem::filesystem_error& err) {
-    std::cerr << "sv-bugpoint: failed to copy " << paths.input << ": " << err.code().message() << "\n";
-    exit(1);
-  }
-
+  if (saveIntermediates) std::filesystem::create_directory(paths.intermediateDir);
+  // NOTE: not removing old files may be kind of misleading (espacially with intermediate dir)
+  // maybe add some kind of purge?
+  copyFile(paths.input, paths.output);
   AttemptStats::writeHeader();
 }
 
@@ -832,6 +843,7 @@ void usage() {
   std::cerr << "Usage: sv-bugpoint [options] outDir/ ./checkscript.sh input.sv\n";
   std::cerr << "Options:\n";
   std::cerr << " --force: overwrite files in outDir without prompting\n";
+  std::cerr << " --save-intermediates: save output of each removal attempt\n";
   std::cerr << " --dump-trees: dump parse tree and elaborated AST of input code\n";
 }
 
@@ -845,6 +857,8 @@ int main(int argc, char** argv) {
       exit(0);
     } else if(strcmp(argv[i], "--force") == 0) {
       force = true;
+    } else if(strcmp(argv[i], "--save-intermediates") == 0) {
+      saveIntermediates = true;
     } else if(strcmp(argv[i], "--dump-trees") == 0) {
       dump = true;
     } else {
