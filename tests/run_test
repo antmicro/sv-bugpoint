@@ -1,0 +1,18 @@
+#!/bin/sh
+# usage: run_test test_name checkscript.sh input.sv
+printf "TEST: %s\n" "$1"
+sv-bugpoint out/"$1" "$2" "$3" --force >/dev/null 2>/dev/null
+
+actual_file=out/"$1"/sv-bugpoint-minimized.sv
+golden_file=golden/"$1"/sv-bugpoint-minimized.sv
+diff $golden_file $actual_file --color=always
+
+EXIT_CODE=$?
+
+[ "$EXIT_CODE" -eq 0 ] && printf "PASSED\n\n" || printf "FAILED\n\n"
+if [ -n "$GOLDEN" ]; then
+  mkdir -p "$(dirname $golden_file)"
+  cp $actual_file $golden_file
+fi
+
+exit $EXIT_CODE

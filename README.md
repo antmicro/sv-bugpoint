@@ -58,3 +58,6 @@ The script attempts to:
   - An example assertion for a simple failure case.
 
 Script works on a best-effort basis, and it is expected that the script it produces will require some manual adjustments.
+
+## Tests
+In order to lanuch tests go to `tests/` directory and type `make`
