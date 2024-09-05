@@ -27,7 +27,7 @@ and [examples/caliptra_vcd/sv-bugpoint-check.sh](examples/caliptra_vcd/sv-bugpoi
 - SystemVerilog code that sv-bugpoint will try to minimize. In order to get one from a multi-file design,
 you can use a preprocessor of your choice (e.g `verilator -E -P inputs_and_other_flags... > sv-bugpoint-input.sv`)
 
-After that, simply launch `sv-bugpoint outDir/ ./checkscript.sh input.sv`.
+After that, simply launch `sv-bugpoint outDir/ checkscript.sh input.sv`.
 
 The output directory will be populated with:
 - `sv-bugpoint-minimized.sv` - minimized code that satisfies the assertion checked by the provided script,

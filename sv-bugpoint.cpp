@@ -39,6 +39,10 @@ struct Paths {
     dumpSyntax = outDir + "/sv-bugpoint-dump-syntax";
     dumpAst = outDir + "/sv-bugpoint-dump-ast";
     intermediateDir = outDir + "/intermediates/";
+    if (this->checkScript.find("/") == std::string::npos) {
+       // checkscript is feeded to execv that may need this (it is implementation-defined what happens when there is no slash)
+      checkScript = "./" + checkScript;
+    }
   }
 };
 
@@ -677,7 +681,7 @@ bool test(AttemptStats& stats) {
     exit(1);
   } else if (pid == 0) {  // we are inside child
     const char* const argv[] = {paths.checkScript.c_str(), paths.tmpOutput.c_str(), NULL};
-    if (execvp(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
+    if (execv(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
       std::string err = "sv-bugpoint: failed to lanuch " + paths.checkScript;
       perror(err.c_str());
       kill(getppid(), SIGINT); // terminate parent
@@ -849,7 +853,7 @@ void initOutDir(bool force) {
 }
 
 void usage() {
-  std::cerr << "Usage: sv-bugpoint [options] outDir/ ./checkscript.sh input.sv\n";
+  std::cerr << "Usage: sv-bugpoint [options] outDir/ checkscript.sh input.sv\n";
   std::cerr << "Options:\n";
   std::cerr << " --force: overwrite files in outDir without prompting\n";
   std::cerr << " --save-intermediates: save output of each removal attempt\n";
