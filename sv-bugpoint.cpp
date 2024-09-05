@@ -104,7 +104,7 @@ public:
     linesAfter = countLines(paths.output);
     endTime = std::chrono::high_resolution_clock::now();
     if (saveIntermediates) {
-      copyFile(paths.tmpOutput, std::format("{}/attempt{}.sv", paths.intermediateDir, currentAttemptIdx));
+      copyFile(paths.tmpOutput, paths.intermediateDir + "/attempt" + std::to_string(currentAttemptIdx) + ".sv");
     }
     currentAttemptIdx++;
     return *this;
