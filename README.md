@@ -1,4 +1,4 @@
-# The sv-bugpoint
+# sv-bugpoint
 
 sv-bugpoint extracts minimized test cases out of code that triggers bugs in Verilator.
 It uses Slang for parsing SystemVerilog into a syntax tree that is then traversed and stripped part by part.
