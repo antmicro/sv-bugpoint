@@ -38,7 +38,7 @@ Temporary file to be checked with the script. It contains code with an applied r
 
 #### sv-bugpoint-trace
 Verbose, tab-delimited trace with stats and aditional info about each removal attempt ([example](examples/caliptra_verilation_err/sv-bugpoint-trace)).
-It can be turned into concise, high-level summary with [sv-bugpoint-trace_summary script](scripts/sv-bugpoint-trace_summary) ([example](examples/caliptra_verilation_err/sv-bugpoint-trace_summarized)).
+It can be turned into concise, high-level summary with [sv-bugpoint-trace-summary script](scripts/sv-bugpoint-trace-summary) ([example](examples/caliptra_verilation_err/sv-bugpoint-trace-summarized)).
 
 
 You only need to provide `sv-bugpoint-input.sv` and `sv-bugpoint-check.sh` in the current working directory. After that, simply launch the `sv-bugpoint` executable.
