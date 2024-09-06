@@ -8,7 +8,8 @@ test-and-lint:
   image: "debian:bookworm"
   tags: ['ace-x86_64']
   script:
-    - apt-get -qqy update && apt-get -qqy --no-install-recommends install cmake build-essential git ca-certificates python3
+    - apt-get -qqy update && apt-get -qqy --no-install-recommends install cmake build-essential git ca-certificates python3 clang-format-14
     - cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
     - cmake --build build -j"$(nproc)"
     - PATH="$PWD/build:$PWD/scripts:$PATH" && make -j"$(nproc)" -O -k -C tests/
+    - .ci-scripts/cpp-fmt-check *.cpp *.hpp
