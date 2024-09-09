@@ -426,6 +426,11 @@ class MemberRemover : public OneTimeRemover<MemberRemover> {
     return DONT_VISIT_CHILDREN;
   }
 
+  ShouldVisitChildren handle(const NetDeclarationSyntax& node, bool isNodeRemovable) {
+    removeNode(node, isNodeRemovable);
+    return DONT_VISIT_CHILDREN;
+  }
+
   ShouldVisitChildren handle(const StructUnionMemberSyntax& node, bool isNodeRemovable) {
     removeNode(node, isNodeRemovable);
     return DONT_VISIT_CHILDREN;
