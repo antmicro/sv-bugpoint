@@ -581,6 +581,41 @@ PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
     return PairRemover(std::move(mapper.pairs));
 }
 
+class StructFieldMapper : public ASTVisitor<StructFieldMapper, true, true, true> {
+    // build vector of struct field pairs (defLocation, initLocation)
+   public:
+    std::vector<std::pair<SourceRange, SourceRange>> pairs;
+
+    void handle(const StructuredAssignmentPatternExpression& initializer) {
+        for(auto setter : initializer.memberSetters) {
+            SourceRange defLoc = SourceRange::NoLocation;
+            SourceRange initLoc = SourceRange::NoLocation;
+
+            if(setter.member && setter.member->getSyntax() && setter.member->getSyntax()->parent) {
+                defLoc = setter.member->getSyntax()->parent->sourceRange();
+            }
+
+            if(setter.expr && setter.expr->syntax && setter.expr->syntax->parent) {
+                initLoc = setter.expr->syntax->parent->sourceRange();
+            }
+
+            pairs.push_back({defLoc, initLoc});
+
+        }
+        visitDefault(initializer);
+
+    }
+};
+
+PairRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree>& tree) {
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();  // kludge for launching full elaboration
+    StructFieldMapper mapper;
+    compilation.getRoot().visit(mapper);
+    return PairRemover(std::move(mapper.pairs));
+}
+
 class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
   // build vector of port pairs (defLocation, useLocation)
   public:
@@ -780,6 +815,7 @@ bool pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
   commited |= removeLoop(MemberRemover(), tree, "memberRemover", passIdx);
   commited |= removeLoop(ModportRemover(), tree, "modportRemover", passIdx);
   commited |= removeLoop(makePortsRemover(tree), tree, "portsRemover", passIdx);
+  commited |= removeLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx);
 
   return commited;
 }
