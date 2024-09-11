@@ -11,5 +11,5 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(slang)
 
-add_executable(sv-bugpoint sv-bugpoint.cpp)
+add_executable(sv-bugpoint sv-bugpoint.cpp debug.cpp)
 target_link_libraries(sv-bugpoint PRIVATE slang::slang)

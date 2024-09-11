@@ -846,13 +846,13 @@ void dumpTrees() {
         auto tree = *treeOrErr;
 
         std::ofstream syntaxDumpFile(paths.dumpSyntax), astDumpFile(paths.dumpAst);
-        AllSyntaxPrinter(2, syntaxDumpFile).visit(tree->root());
+        printSyntaxTree(tree, syntaxDumpFile);
 
         Compilation compilation;
         compilation.addSyntaxTree(tree);
         compilation.getAllDiagnostics();  // kludge for launching full elaboration
 
-        AstPrinter(astDumpFile).visit(compilation.getRoot());
+        printAst(compilation.getRoot(), astDumpFile);
     } else {
         std::cerr << "sv-bugpoint: failed to load " << paths.input << " file "
                   << treeOrErr.error().second << "\n";
