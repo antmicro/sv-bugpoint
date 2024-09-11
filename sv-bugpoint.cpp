@@ -15,125 +15,11 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_set>
-#include "debug.hpp"
+#include "utils.hpp"
 
 using namespace slang::syntax;
 using namespace slang::ast;
 using namespace slang;
-
-struct Paths {
-    std::string outDir;
-    std::string checkScript;
-    std::string input;
-    std::string output;
-    std::string tmpOutput;
-    std::string trace;
-    std::string dumpSyntax;
-    std::string dumpAst;
-    std::string intermediateDir;
-    Paths() {}
-    Paths(std::string outDir, std::string checkScript, std::string input)
-        : outDir(outDir), input(input), checkScript(checkScript) {
-        output = outDir + "/sv-bugpoint-minimized.sv";
-        tmpOutput = outDir + "/sv-bugpoint-tmp.sv";
-        trace = outDir + "/sv-bugpoint-trace";
-        dumpSyntax = outDir + "/sv-bugpoint-dump-syntax";
-        dumpAst = outDir + "/sv-bugpoint-dump-ast";
-        intermediateDir = outDir + "/intermediates/";
-        if (this->checkScript.find("/") == std::string::npos) {
-            // check script is fed to execv that may need this (it is implementation-defined what
-            // happens when there is no slash)
-            this->checkScript = "./" + checkScript;
-        }
-    }
-};
-
-Paths paths;
-// Flag for saving intermediate output of each attempt
-bool saveIntermediates = false;
-// Global counter incremented after end of each attempt
-// Meant mainly for setting up conditional breakpoints based on trace
-int currentAttemptIdx = 0;
-
-void copyFile(const std::string& from, const std::string& to) {
-    try {
-        std::filesystem::copy(from, to, std::filesystem::copy_options::overwrite_existing);
-    } catch (const std::filesystem::filesystem_error& err) {
-        std::cerr << "sv-bugpoint: failed to copy " << from << "to" << to << ": "
-                  << err.code().message() << "\n";
-        exit(1);
-    }
-}
-
-void mkdir(const std::string& path) {
-    try {
-        std::filesystem::create_directory(path);
-    } catch (const std::filesystem::filesystem_error& err) {
-        std::cerr << "sv-bugpoint: failed to make directory " << path << ": "
-                  << err.code().message() << "\n";
-        exit(1);
-    }
-}
-
-int countLines(const std::string& filename) {
-    std::ifstream file(filename);
-    return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
-}
-
-class AttemptStats {
-   public:
-    std::string pass;
-    std::string stage;
-    int linesBefore;
-    int linesAfter;
-    std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
-    std::chrono::time_point<std::chrono::high_resolution_clock> endTime;
-    bool committed;
-    std::string typeInfo;
-    int idx;
-
-    AttemptStats(const std::string& pass, const std::string& stage)
-        : pass(pass), stage(stage), committed(false) {}
-
-    AttemptStats& begin() {
-        linesBefore = countLines(paths.output);
-        startTime = std::chrono::high_resolution_clock::now();
-        idx = currentAttemptIdx;
-        return *this;
-    }
-
-    AttemptStats& end(bool committed) {
-        this->committed = committed;
-        linesAfter = countLines(paths.output);
-        endTime = std::chrono::high_resolution_clock::now();
-        if (saveIntermediates) {
-            copyFile(paths.tmpOutput, paths.intermediateDir + "/attempt" +
-                                          std::to_string(currentAttemptIdx) + ".sv");
-        }
-        currentAttemptIdx++;
-        return *this;
-    }
-
-    std::string toStr() const {
-        std::stringstream tmp;
-        int lines = linesBefore - linesAfter;
-        auto duration =
-            std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-        tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration
-            << "ms\t" << idx << '\t' << typeInfo << "\n";
-        return tmp.str();
-    }
-
-    void report() {
-        std::cerr << toStr();
-        std::ofstream file(paths.trace, std::ios_base::app);
-        file << toStr() << std::flush;
-    }
-    static void writeHeader() {
-        std::ofstream file(paths.trace);
-        file << "pass\tstage\tlines_removed\tcommitted\ttime\tidx\ttype_info\n";
-    }
-};
 
 #define DERIVED static_cast<TDerived*>(this)
 
@@ -723,54 +609,6 @@ PairRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree) {
     PortMapper mapper;
     compilation.getRoot().visit(mapper);
     return PairRemover(std::move(mapper.pairs));
-}
-
-bool test(AttemptStats& stats) {
-    // Execute ./sv-bugpoint-check.sh tmpFile.
-    // On success (zero exit code) replace minimized file with tmp, and return true.
-    // On fail (non-zero exit code) return false.
-    stats.begin();
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("fork failed");
-        exit(1);
-    } else if (pid == 0) {  // we are inside child
-        const char* const argv[] = {paths.checkScript.c_str(), paths.tmpOutput.c_str(), NULL};
-        if (execv(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
-            std::string err = "sv-bugpoint: failed to lanuch " + paths.checkScript;
-            perror(err.c_str());
-            kill(getppid(), SIGINT);  // terminate parent
-            exit(1);
-        }
-    } else {  // we are in parent
-        int wstatus;
-        int rc = waitpid(pid, &wstatus, 0);
-        if (rc <= 0 || !WIFEXITED(wstatus)) {
-            perror("waitpid failed");
-            exit(1);
-        }
-        if (WEXITSTATUS(wstatus)) {
-            stats.end(false).report();
-            return false;
-        } else {
-            std::filesystem::copy(paths.tmpOutput, paths.output,
-                                  std::filesystem::copy_options::overwrite_existing);
-            stats.end(true).report();
-            return true;
-        }
-    }
-
-    return false;  // just to make compiler happy - will never get here
-}
-
-bool test(std::shared_ptr<SyntaxTree> tree, AttemptStats& info) {
-    // Write given tree to tmp file and execute ./sv-bugpoint-check.sh tmpFile.
-    std::ofstream tmpFile;
-    tmpFile.rdbuf()->pubsetbuf(
-        0, 0);  // Enable unbuffered io. Has to be called before open to be effective
-    tmpFile.open(paths.tmpOutput);
-    tmpFile << SyntaxPrinter::printFile(*tree);
-    return test(info);
 }
 
 template <typename T>
