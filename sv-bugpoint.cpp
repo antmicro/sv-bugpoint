@@ -41,7 +41,7 @@ struct Paths {
         dumpAst = outDir + "/sv-bugpoint-dump-ast";
         intermediateDir = outDir + "/intermediates/";
         if (this->checkScript.find("/") == std::string::npos) {
-            // checkscript is feeded to execv that may need this (it is implementation-defined what
+            // check script is fed to execv that may need this (it is implementation-defined what
             // happens when there is no slash)
             checkScript = "./" + checkScript;
         }
@@ -78,7 +78,6 @@ void mkdir(std::string path) {
 int countLines(std::string filename) {
     std::ifstream file(filename);
     return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
-    ;
 }
 
 class AttemptStats {
@@ -292,7 +291,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
     }
 
     void moveStartToSuccesor() {
-        // Start next transform from succesor of removed node.
+        // Start next transform from successor of removed node.
         // Meant be run when you decided to commit removal (i.e you pass just transformed tree for
         // next transform)
         startPoint = removedSuccessor;
@@ -301,8 +300,8 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
 
     void moveStartToChildOrSuccesor() {
         // Start next transform from child of removed node if possible, otherwise, from its
-        // succesor. Meant to be run when you decided to rollback removal (i.e. you discard just
-        // transformed tree)
+        // successor. Meant to be run when you decide to rollback removal (i.e. you're discarding a
+        // just transformed tree)
         if (removedChild != SourceRange::NoLocation) {
             startPoint = removedChild;
         } else {
@@ -557,7 +556,8 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
 };
 
 class ExternMapper : public ASTVisitor<ExternMapper, true, true, true> {
-    // build vector of extern methods' pairs (prototypeLocation, implementationLocation)
+    // Builds vector that maps the declarations (prototypes) and definitions (implementations) of
+    // extern methods
    public:
     std::vector<std::pair<SourceRange, SourceRange>> pairs;
 
@@ -601,7 +601,7 @@ PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
 }
 
 class StructFieldMapper : public ASTVisitor<StructFieldMapper, true, true, true> {
-    // build vector of struct field pairs (defLocation, initLocation)
+    // Builds vector that maps the definitions  and initializations of struct fields
    public:
     std::vector<std::pair<SourceRange, SourceRange>> pairs;
 
@@ -634,13 +634,13 @@ PairRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree>& tree) {
 }
 
 class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
-    // build vector of port pairs (defLocation, useLocation)
+    // Builds vector that maps the definitions  and usages of ports
    public:
     class FindConnectionSyntax : public SyntaxVisitor<FindConnectionSyntax> {
        public:
         // PortConnection symbol does not have getSyntax() or sourceRange() methods.
-        // This visitor finds sourceRange by locating PortConnectionSyntax that contains same expr
-        // as symbol
+        // This visitor finds sourceRange by locating PortConnectionSyntax that contains the same
+        // expression as symbol
         enum {
             WAIT_FOR_EXPR,
             REGISTER_PORT_CONN,
@@ -906,8 +906,8 @@ void initOutDir(bool force) {
     }
     if (saveIntermediates)
         mkdir(paths.intermediateDir);
-    // NOTE: not removing old files may be kind of misleading (espacially with intermediate dir)
-    // maybe add some kind of purge?
+    // NOTE: not removing old files may be misleading (especially having an intermediate dir)
+    // Maybe add some kind of purge?
     copyFile(paths.input, paths.output);
     AttemptStats::writeHeader();
 }
