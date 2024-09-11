@@ -823,7 +823,7 @@ bool pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
     bool commited = false;
 
     commited |= removeLoop(BodyRemover(), tree, "bodyRemover", passIdx);
-    commited |= removeLoop(InstantationRemover(), tree, "instantationRemover", passIdx);
+    commited |= removeLoop(InstantationRemover(), tree, "instantiationRemover", passIdx);
     commited |= removeLoop(BodyPartsRemover(), tree, "bodyPartsRemover", passIdx);
     commited |= removeLoop(makeExternRemover(tree), tree, "externRemover", passIdx);
     commited |= removeLoop(DeclRemover(), tree, "declRemover", passIdx);
