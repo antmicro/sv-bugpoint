@@ -43,7 +43,7 @@ struct Paths {
         if (this->checkScript.find("/") == std::string::npos) {
             // check script is fed to execv that may need this (it is implementation-defined what
             // happens when there is no slash)
-            checkScript = "./" + checkScript;
+            this->checkScript = "./" + checkScript;
         }
     }
 };
@@ -55,7 +55,7 @@ bool saveIntermediates = false;
 // Meant mainly for setting up conditional breakpoints based on trace
 int currentAttemptIdx = 0;
 
-void copyFile(std::string from, std::string to) {
+void copyFile(const std::string& from, const std::string& to) {
     try {
         std::filesystem::copy(from, to, std::filesystem::copy_options::overwrite_existing);
     } catch (const std::filesystem::filesystem_error& err) {
@@ -65,7 +65,7 @@ void copyFile(std::string from, std::string to) {
     }
 }
 
-void mkdir(std::string path) {
+void mkdir(const std::string& path) {
     try {
         std::filesystem::create_directory(path);
     } catch (const std::filesystem::filesystem_error& err) {
@@ -75,7 +75,7 @@ void mkdir(std::string path) {
     }
 }
 
-int countLines(std::string filename) {
+int countLines(const std::string& filename) {
     std::ifstream file(filename);
     return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
 }
@@ -92,7 +92,7 @@ class AttemptStats {
     std::string typeInfo;
     int idx;
 
-    AttemptStats(std::string pass, std::string stage)
+    AttemptStats(const std::string& pass, const std::string& stage)
         : pass(pass), stage(stage), committed(false) {}
 
     AttemptStats& begin() {
@@ -262,7 +262,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
         }
     }
 
-    std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree,
+    std::shared_ptr<SyntaxTree> transform(std::shared_ptr<SyntaxTree> tree,
                                           bool& traversalDone,
                                           AttemptStats& stats) {
         // Apply one removal, and return changed tree.
@@ -507,7 +507,7 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
 
     PairRemover(std::vector<std::pair<SourceRange, SourceRange>>&& pairs) : pairs(pairs) {}
 
-    std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree,
+    std::shared_ptr<SyntaxTree> transform(std::shared_ptr<SyntaxTree> tree,
                                           bool& traversalDone,
                                           AttemptStats& stats) {
         if (pairs.empty()) {
@@ -591,7 +591,7 @@ class ExternMapper : public ASTVisitor<ExternMapper, true, true, true> {
     }
 };
 
-PairRemover makeExternRemover(std::shared_ptr<SyntaxTree>& tree) {
+PairRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();  // kludge for launching full elaboration
@@ -624,7 +624,7 @@ class StructFieldMapper : public ASTVisitor<StructFieldMapper, true, true, true>
     }
 };
 
-PairRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree>& tree) {
+PairRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree> tree) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();  // kludge for launching full elaboration
@@ -715,7 +715,7 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
     }
 };
 
-PairRemover makePortsRemover(std::shared_ptr<SyntaxTree>& tree) {
+PairRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();  // kludge for launching full elaboration
@@ -762,7 +762,7 @@ bool test(AttemptStats& stats) {
     return false;  // just to make compiler happy - will never get here
 }
 
-bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info) {
+bool test(std::shared_ptr<SyntaxTree> tree, AttemptStats& info) {
     // Write given tree to tmp file and execute ./sv-bugpoint-check.sh tmpFile.
     std::ofstream tmpFile;
     tmpFile.rdbuf()->pubsetbuf(
@@ -819,7 +819,7 @@ bool removeLoop(PairRemover rewriter,
     return committed;
 }
 
-bool pass(std::shared_ptr<SyntaxTree>& tree, std::string passIdx = "-") {
+bool pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx = "-") {
     bool commited = false;
 
     commited |= removeLoop(BodyRemover(), tree, "bodyRemover", passIdx);
