@@ -1,0 +1,25 @@
+name: test
+run-name: Build, run tests, check formatting
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: "ubuntu-22.04"
+    container:
+      image: verilator/verilator:v5.016
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: apt-get -qqy update && apt-get -qqy --no-install-recommends install cmake build-essential git ca-certificates python3 clang-format-14
+      - name: Build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build build -j"$(nproc)"
+      - name: Run tests
+        run: |
+          PATH="$PWD/build:$PWD/scripts:$PATH"
+          make -j"$(nproc)" -O -k -C tests/ --no-print-directory
+      - name: Check formatting
+        run: .ci-scripts/cpp-fmt-check *.cpp *.hpp
