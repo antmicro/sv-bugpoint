@@ -1,11 +1,17 @@
 #!/bin/sh
 # usage: run_test test_name checkscript.sh input.sv
 printf "TEST: %s\n" "$1"
-sv-bugpoint out/"$1" "$2" "$3" --force >/dev/null 2>/dev/null
 
 actual_file=out/"$1"/sv-bugpoint-minimized.sv
+[ -e $actual_file ] && rm $actual_file # to not get fake PASS if bugpoint did not overwrite old result
 golden_file=golden/"$1"/sv-bugpoint-minimized.sv
-diff $golden_file $actual_file --color=always
+
+bugpoint_msg=$(sv-bugpoint out/"$1" "$2" "$3" --force 2>&1)
+if [ $? -ne 0 ]; then
+  printf "%s\n" "$bugpoint_msg" >&2; exit 1
+fi
+
+diff $golden_file $actual_file --color=always >&2
 
 EXIT_CODE=$?
 

@@ -11,5 +11,5 @@ test-and-lint:
     - apt-get -qqy update && apt-get -qqy --no-install-recommends install cmake build-essential git ca-certificates python3 clang-format-14
     - cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
     - cmake --build build -j"$(nproc)"
-    - PATH="$PWD/build:$PWD/scripts:$PATH" && make -j"$(nproc)" -O -k -C tests/
+    - PATH="$PWD/build:$PWD/scripts:$PATH" && make -j"$(nproc)" -O -k -C tests/ --no-print-directory
     - .ci-scripts/cpp-fmt-check *.cpp *.hpp
