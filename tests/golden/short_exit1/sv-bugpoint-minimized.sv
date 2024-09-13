@@ -52,12 +52,9 @@ module serial_adder #(WIDTH=32) (
         full_adder fa(a[i], b[i], c[i], s[i], c[i+1]);
     endgenerate
 
-
     struct_foo foo = '{5,6};
     assign foo.a = 25;
-
-    wire [3:0] x = 4'hF;
-    wire [3:0];
+    assign foo.c = 0;
     
     assign c[0] = cin;
     assign cout = c[WIDTH];
