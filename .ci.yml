@@ -12,4 +12,4 @@ test-and-lint:
     - cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -G Ninja -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold" -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=mold"
     - cmake --build build -j"$(nproc)"
     - PATH="$PWD/build:$PWD/scripts:$PATH" && make -j"$(nproc)" -O -k -C tests/ --no-print-directory
-    - .ci-scripts/cpp-fmt-check *.cpp *.hpp
+    - .ci-scripts/cpp-fmt-check source/*.cpp source/*.hpp
