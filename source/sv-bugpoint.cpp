@@ -1,4 +1,3 @@
-#include <slang/ast/Compilation.h>
 #include <slang/syntax/SyntaxTree.h>
 #include <iostream>
 #include "OneTimeRemoversFwd.hpp"
@@ -48,26 +47,6 @@ bool pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx = "-") {
     commited |= removeLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx);
 
     return commited;
-}
-
-void dumpTrees() {
-    auto treeOrErr = SyntaxTree::fromFile(paths.input);
-    if (treeOrErr) {
-        auto tree = *treeOrErr;
-
-        std::ofstream syntaxDumpFile(paths.dumpSyntax), astDumpFile(paths.dumpAst);
-        printSyntaxTree(tree, syntaxDumpFile);
-
-        Compilation compilation;
-        compilation.addSyntaxTree(tree);
-        compilation.getAllDiagnostics();  // kludge for launching full elaboration
-
-        printAst(compilation.getRoot(), astDumpFile);
-    } else {
-        std::cerr << "sv-bugpoint: failed to load " << paths.input << " file "
-                  << treeOrErr.error().second << "\n";
-        exit(1);
-    }
 }
 
 bool removeVerilatorConfig() {

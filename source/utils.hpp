@@ -1,8 +1,6 @@
 #pragma once
-#include <slang/ast/symbols/CompilationUnitSymbols.h>
 #include <slang/syntax/SyntaxTree.h>
 #include <chrono>
-#include <fstream>
 #include <string>
 
 using namespace slang::ast;
@@ -13,9 +11,8 @@ std::string prettifyNodeTypename(const char* type);
 // stringize type of node, demangle and remove namespace specifier
 #define STRINGIZE_NODE_TYPE(TYPE) prettifyNodeTypename(typeid(TYPE).name())
 
-void printSyntaxTree(const std::shared_ptr<SyntaxTree>& tree, std::ostream& file);
-void printAst(const RootSymbol& tree, std::ostream& file);
 std::string toString(SourceRange sourceRange);
+void dumpTrees();
 
 struct Paths {
     std::string outDir;

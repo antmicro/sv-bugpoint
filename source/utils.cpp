@@ -123,6 +123,26 @@ void printAst(const RootSymbol& root, std::ostream& file) {
     AstPrinter(file).visit(root);
 }
 
+void dumpTrees() {
+    auto treeOrErr = SyntaxTree::fromFile(paths.input);
+    if (treeOrErr) {
+        auto tree = *treeOrErr;
+
+        std::ofstream syntaxDumpFile(paths.dumpSyntax), astDumpFile(paths.dumpAst);
+        printSyntaxTree(tree, syntaxDumpFile);
+
+        Compilation compilation;
+        compilation.addSyntaxTree(tree);
+        compilation.getAllDiagnostics();  // kludge for launching full elaboration
+
+        printAst(compilation.getRoot(), astDumpFile);
+    } else {
+        std::cerr << "sv-bugpoint: failed to load " << paths.input << " file "
+                  << treeOrErr.error().second << "\n";
+        exit(1);
+    }
+}
+
 std::string toString(SourceRange sourceRange) {
     if (sourceRange == SourceRange::NoLocation)
         return "NO_LOCATION";
