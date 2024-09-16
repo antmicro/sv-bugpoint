@@ -1,0 +1,18 @@
+#include <slang/syntax/SyntaxTree.h>
+
+using namespace slang::syntax;
+
+// forward declarations of simple code removers that try to remove nodes one-by-one
+class BodyPartsRemover;
+class BodyRemover;
+class DeclRemover;
+class StatementsRemover;
+class ImportsRemover;
+class MemberRemover;
+class ParamAssignRemover;
+class ContAssignRemover;
+class ModportRemover;
+class InstantationRemover;
+
+template <typename T>
+bool removeLoop(std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx);
