@@ -1,5 +1,4 @@
 #include <slang/syntax/SyntaxVisitor.h>
-#include <slang/text/SourceLocation.h>
 #include "utils.hpp"
 
 class PairRemover : public SyntaxRewriter<PairRemover> {

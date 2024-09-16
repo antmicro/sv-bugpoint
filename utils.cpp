@@ -1,5 +1,7 @@
 #include "utils.hpp"
+#include <slang/ast/ASTVisitor.h>
 #include <slang/syntax/SyntaxPrinter.h>
+#include <slang/syntax/SyntaxVisitor.h>
 #include <sys/wait.h>
 #include <unistd.h>
 

@@ -1,4 +1,5 @@
 #include <slang/syntax/SyntaxVisitor.h>
+#include <iosfwd>
 #include "utils.hpp"
 
 #define DERIVED static_cast<TDerived*>(this)

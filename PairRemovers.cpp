@@ -1,7 +1,6 @@
 #include "PairRemovers.hpp"
 #include <slang/ast/ASTVisitor.h>
 #include <unordered_set>
-#include "utils.hpp"
 
 class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
     // Builds vector that maps the definitions  and usages of ports

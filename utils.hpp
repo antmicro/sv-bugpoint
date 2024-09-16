@@ -1,11 +1,8 @@
 #pragma once
-#include <slang/ast/ASTVisitor.h>
-#include <slang/syntax/AllSyntax.h>
-#include <slang/syntax/SyntaxVisitor.h>
+#include <slang/ast/symbols/CompilationUnitSymbols.h>
+#include <slang/syntax/SyntaxTree.h>
 #include <chrono>
 #include <fstream>
-#include <iostream>
-#include <sstream>
 #include <string>
 
 using namespace slang::ast;
