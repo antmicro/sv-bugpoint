@@ -16,3 +16,16 @@ add_executable(sv-bugpoint sv-bugpoint.cpp utils.cpp PairRemovers.cpp BodyRemove
   StatementsRemover.cpp MemberRemover.cpp ImportsRemover.cpp)
 
 target_link_libraries(sv-bugpoint PRIVATE slang::slang)
+target_precompile_headers(sv-bugpoint PUBLIC
+  <string>
+  <fstream>
+  <chrono>
+  <iostream>
+  <unordered_set>
+  <slang/syntax/SyntaxVisitor.h>
+  <slang/syntax/SyntaxTree.h>
+  <slang/syntax/AllSyntax.h>
+  <slang/ast/ASTVisitor.h>
+  <slang/syntax/SyntaxPrinter.h>
+  <slang/text/SourceLocation.h>
+)
