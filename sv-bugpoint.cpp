@@ -117,9 +117,10 @@ class AttemptStats {
     std::string toStr() const {
         std::stringstream tmp;
         int lines = linesBefore - linesAfter;
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+        auto duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
         tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration
-            << '\t' << idx << '\t' << typeInfo << "\n";
+            << "ms\t" << idx << '\t' << typeInfo << "\n";
         return tmp.str();
     }
 
