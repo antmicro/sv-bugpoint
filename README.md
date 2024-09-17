@@ -19,6 +19,12 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j8
 ```
 
+For faster builds you may want to use following invocation instead (you may have to install `mold`, `ninja` and `ccache` beforehand):
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_LINKER_TYPE=MOLD -G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+cmake --build build -j8
+```
+
 The dependencies will be fetched and built automatically.
 The `sv-bugpoint` executable is placed in the `build/sv-bugpoint` directory.
 If you are going to use the accompanying scripts, it is recommended to add the entire `scripts/` dir
