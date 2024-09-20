@@ -2,7 +2,7 @@
 #include <iostream>
 #include "OneTimeRemoversFwd.hpp"
 #include "PairRemovers.hpp"
-#include "utils.hpp"
+#include "Utils.hpp"
 
 using namespace slang::syntax;
 using namespace slang::ast;

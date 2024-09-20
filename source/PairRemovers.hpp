@@ -1,5 +1,5 @@
 #include <slang/syntax/SyntaxVisitor.h>
-#include "utils.hpp"
+#include "Utils.hpp"
 
 class PairRemover : public SyntaxRewriter<PairRemover> {
     // each tranform yields removal of pair of nodes (based on locations in suplied pairs list)
