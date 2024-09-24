@@ -1,6 +1,9 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+
 # expand references to argument files and remove references to Verilog and "waiver files"
 # to make command ready for building preprocessed source.
+
 PARSE_ARG_FILE=0
 for i in "$@"; do
   if [[ "$PARSE_ARG_FILE" -ne 0 ]]; then

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #include "Utils.hpp"
 #include <slang/ast/ASTVisitor.h>
 #include <slang/syntax/SyntaxPrinter.h>

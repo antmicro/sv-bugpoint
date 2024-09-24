@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+
 # best-effort script for auto generating sv-bugpoint-input.sv and template sv-bugpoint-check.sh
 # usage:
 # 1) issue sv-bugpoint-verilator-gen --init

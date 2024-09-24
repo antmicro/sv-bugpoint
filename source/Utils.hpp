@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #pragma once
 #include <slang/syntax/SyntaxTree.h>
 #include <chrono>
