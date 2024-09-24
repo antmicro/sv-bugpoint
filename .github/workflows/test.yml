@@ -17,9 +17,7 @@ jobs:
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
           cmake --build build -j"$(nproc)"
-      - name: Run tests
+      - name: Run tests and linters
         run: |
           PATH="$PWD/build:$PWD/scripts:$PATH"
-          make -j"$(nproc)" -O -k -C tests/ --no-print-directory
-      - name: Check formatting
-        run: .ci-scripts/cpp-fmt-check source/*.cpp source/*.hpp
+          make -j"$(nproc)" -O -k --no-print-directory -f check.mk

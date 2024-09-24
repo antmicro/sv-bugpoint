@@ -78,6 +78,21 @@ The script attempts to:
 
 This script works on a best-effort basis, and it is expected that the result will require some manual adjustments.
 
-## Tests
+## Testing and linting
 
-In order to launch tests, go to the `tests/` directory and run `make`.
+`make`, `clang-format`, `shellcheck` and `verilator` are prerequisites for testing and linting.
+
+To run all tests, linters and format-checkers, invoke:
+```
+make -f check.mk
+```
+
+in project root. To auto-apply linter/formatter fixes, run:
+```
+make -f check.mk autofix
+```
+
+Golden files used in tests can be regenerated using:
+```
+GOLDEN=1 make -f check.mk test
+```
