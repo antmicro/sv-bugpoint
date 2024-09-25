@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+
 # usage: run_test test_name checkscript.sh input.sv
 printf "TEST: %s\n" "$1"
 

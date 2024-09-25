@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+
 # create concise minimization summary from sv-bugpoint-trace provided on stdin
 awk '
 NR==1{

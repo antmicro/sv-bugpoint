@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 
 # test script that asserts that verilation fails with same error message as in golden file
 

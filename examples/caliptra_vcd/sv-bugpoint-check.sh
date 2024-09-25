@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 
 # test script that asserts that suplied file can be verilated, compiled
 # and that `timer1_timeout_period` signals are constantly toggling (by scrapping

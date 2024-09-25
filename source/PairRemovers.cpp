@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #include "PairRemovers.hpp"
 #include <slang/ast/ASTVisitor.h>
 #include <unordered_set>

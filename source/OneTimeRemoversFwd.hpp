@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #include <slang/syntax/SyntaxTree.h>
 
 using namespace slang::syntax;
