@@ -29,6 +29,7 @@ mkfifo sim.vcd
 trap cleanup EXIT INT HUP TERM
 
 timeout 3 ./obj_dir/Vcaliptra_top_tb &
+# shellcheck disable=SC2016
 # extract all changes to timer1_timeout_period[0] and timer1_timeout_period[1] before timestamp "40"
 timeout 3 awk '
 /var wire .* timer1_timeout_period\[/ { ID_TO_NAME[$4]=$5 }

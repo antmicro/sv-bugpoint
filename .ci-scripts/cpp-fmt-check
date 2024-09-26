@@ -1,7 +1,0 @@
-#!/bin/bash
-EXIT_CODE=0
-for i in "$@"; do
-  diff "$i" <(clang-format-14 "$i")  --label "original $i" --label "formatted $i" --color=always -u || EXIT_CODE=1
-done
-
-exit $EXIT_CODE
