@@ -132,6 +132,17 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
         }
     }
 
+    template <typename TOrig, typename TNew>
+    void replaceNode(const TOrig& originalNode, TNew& newNode) {
+        logType<TOrig>();
+        // NOTE: this may look weird in multiline cases
+        std::cerr << "-" << originalNode.toString() << "\n";
+        std::cerr << "+" << newNode.toString() << "\n";
+        DERIVED->replace(originalNode, newNode);
+        rewritePoint = originalNode.sourceRange();
+        state = REGISTER_CHILD;
+    }
+
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree> tree,
                                           bool& traversalDone,
                                           AttemptStats& stats) {

@@ -39,6 +39,7 @@ bool pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx = "-") {
     commited |= rewriteLoop(makeExternRemover(tree), tree, "externRemover", passIdx);
     commited |= rewriteLoop<DeclRemover>(tree, "declRemover", passIdx);
     commited |= rewriteLoop<StatementsRemover>(tree, "statementsRemover", passIdx);
+    commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx);
     commited |= rewriteLoop<ImportsRemover>(tree, "importsRemover", passIdx);
     commited |= rewriteLoop<ParamAssignRemover>(tree, "paramAssignRemover", passIdx);
     commited |= rewriteLoop<ContAssignRemover>(tree, "contAssignRemover", passIdx);
