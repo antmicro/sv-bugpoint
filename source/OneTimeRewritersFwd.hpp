@@ -14,6 +14,7 @@ class ParamAssignRemover;
 class ContAssignRemover;
 class ModportRemover;
 class InstantationRemover;
+class TypeSimplifier;
 
 template <typename T>
-bool removeLoop(std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx);
+bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx);

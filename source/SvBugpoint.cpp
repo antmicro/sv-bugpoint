@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <slang/syntax/SyntaxTree.h>
 #include <iostream>
-#include "OneTimeRemoversFwd.hpp"
+#include "OneTimeRewritersFwd.hpp"
 #include "PairRemovers.hpp"
 #include "Utils.hpp"
 
@@ -9,7 +9,7 @@ using namespace slang::syntax;
 using namespace slang::ast;
 using namespace slang;
 
-bool removeLoop(PairRemover rewriter,
+bool rewriteLoop(PairRemover rewriter,
                 std::shared_ptr<SyntaxTree>& tree,
                 std::string stageName,
                 std::string passIdx) {
@@ -33,19 +33,19 @@ bool removeLoop(PairRemover rewriter,
 bool pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx = "-") {
     bool commited = false;
 
-    commited |= removeLoop<BodyRemover>(tree, "bodyRemover", passIdx);
-    commited |= removeLoop<InstantationRemover>(tree, "instantiationRemover", passIdx);
-    commited |= removeLoop<BodyPartsRemover>(tree, "bodyPartsRemover", passIdx);
-    commited |= removeLoop(makeExternRemover(tree), tree, "externRemover", passIdx);
-    commited |= removeLoop<DeclRemover>(tree, "declRemover", passIdx);
-    commited |= removeLoop<StatementsRemover>(tree, "statementsRemover", passIdx);
-    commited |= removeLoop<ImportsRemover>(tree, "importsRemover", passIdx);
-    commited |= removeLoop<ParamAssignRemover>(tree, "paramAssignRemover", passIdx);
-    commited |= removeLoop<ContAssignRemover>(tree, "contAssignRemover", passIdx);
-    commited |= removeLoop<MemberRemover>(tree, "memberRemover", passIdx);
-    commited |= removeLoop<ModportRemover>(tree, "modportRemover", passIdx);
-    commited |= removeLoop(makePortsRemover(tree), tree, "portsRemover", passIdx);
-    commited |= removeLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx);
+    commited |= rewriteLoop<BodyRemover>(tree, "bodyRemover", passIdx);
+    commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx);
+    commited |= rewriteLoop<BodyPartsRemover>(tree, "bodyPartsRemover", passIdx);
+    commited |= rewriteLoop(makeExternRemover(tree), tree, "externRemover", passIdx);
+    commited |= rewriteLoop<DeclRemover>(tree, "declRemover", passIdx);
+    commited |= rewriteLoop<StatementsRemover>(tree, "statementsRemover", passIdx);
+    commited |= rewriteLoop<ImportsRemover>(tree, "importsRemover", passIdx);
+    commited |= rewriteLoop<ParamAssignRemover>(tree, "paramAssignRemover", passIdx);
+    commited |= rewriteLoop<ContAssignRemover>(tree, "contAssignRemover", passIdx);
+    commited |= rewriteLoop<MemberRemover>(tree, "memberRemover", passIdx);
+    commited |= rewriteLoop<ModportRemover>(tree, "modportRemover", passIdx);
+    commited |= rewriteLoop(makePortsRemover(tree), tree, "portsRemover", passIdx);
+    commited |= rewriteLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx);
 
     return commited;
 }

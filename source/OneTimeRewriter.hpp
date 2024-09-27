@@ -6,14 +6,14 @@
 #define DERIVED static_cast<TDerived*>(this)
 
 template <typename TDerived>
-class OneTimeRemover : public SyntaxRewriter<TDerived> {
-    // Incremental node remover - each transform() yields one removal at most
+class OneTimeRewriter : public SyntaxRewriter<TDerived> {
+    // Incremental node rewriter - each transform() yields one rewrite at most
    public:
     enum State {
         SKIP_TO_START,
         REMOVAL_ALLOWED,
         REGISTER_CHILD,
-        WAIT_FOR_PARENT_EXIT,
+        EXIT_REWRITE_POINT,
         REGISTER_SUCCESSOR,
         SKIP_TO_END,
     };
@@ -24,18 +24,19 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
     };
 
     SourceRange startPoint;
-    SourceRange removed;
-    SourceRange removedChild;
-    SourceRange removedSuccessor;
+
+    SourceRange rewritePoint;
+    SourceRange rewritePointChildren;
+    SourceRange rewritePointSuccessor;
 
     State state = REMOVAL_ALLOWED;
 
-    // As an optimization we do removal in quasi-sorted way:
-    // first remove nodes at least 1024 lines long, then 512, and so on
+    // As an optimization we do minimization in quasi-sorted way:
+    // first minimize nodes at least 1024 lines long, then 512, and so on
     unsigned linesUpperLimit = INT_MAX;
     unsigned linesLowerLimit = 1024;
 
-    std::string removedTypeInfo;
+    std::string rewrittenTypeInfo;
 
     /// Visit all child nodes
     template <typename T>
@@ -56,19 +57,19 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
         }
 
         if (state == REGISTER_CHILD && node.sourceRange() != SourceRange::NoLocation &&
-            node.sourceRange() != removed) {  // avoid marking removed node as its own children
-            removedChild = node.sourceRange();
-            state = WAIT_FOR_PARENT_EXIT;
+            node.sourceRange() != rewritePoint) {  // avoid marking rewritten node as its own children
+            rewritePointChildren = node.sourceRange();
+            state = EXIT_REWRITE_POINT;
             return;
         }
 
         if (state == REGISTER_SUCCESSOR && node.sourceRange() != SourceRange::NoLocation) {
-            removedSuccessor = node.sourceRange();
+            rewritePointSuccessor = node.sourceRange();
             state = SKIP_TO_END;
             return;
         }
 
-        if (state == SKIP_TO_END || state == WAIT_FOR_PARENT_EXIT) {
+        if (state == SKIP_TO_END || state == EXIT_REWRITE_POINT) {
             return;
         }
 
@@ -80,8 +81,8 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
             DERIVED->visitDefault(node);
         }
 
-        if ((state == REGISTER_CHILD || state == WAIT_FOR_PARENT_EXIT) &&
-            node.sourceRange() == removed) {
+        if ((state == REGISTER_CHILD || state == EXIT_REWRITE_POINT) &&
+            node.sourceRange() == rewritePoint) {
             state = REGISTER_SUCCESSOR;
         }
     }
@@ -103,7 +104,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
     template <typename T>
     void logType() {
         std::cerr << STRINGIZE_NODE_TYPE(T) << "\n";
-        removedTypeInfo = STRINGIZE_NODE_TYPE(T);
+        rewrittenTypeInfo = STRINGIZE_NODE_TYPE(T);
     }
 
     template <typename T>
@@ -112,7 +113,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
             logType<T>();
             std::cerr << node.toString() << "\n";
             DERIVED->remove(node);
-            removed = node.sourceRange();
+            rewritePoint = node.sourceRange();
             state = REGISTER_CHILD;
         }
     }
@@ -126,7 +127,7 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
                 std::cerr << item->toString();
             }
             std::cerr << "\n";
-            removed = parent.sourceRange();
+            rewritePoint = parent.sourceRange();
             state = REGISTER_CHILD;  // TODO: examine whether we register right child here
         }
     }
@@ -134,71 +135,71 @@ class OneTimeRemover : public SyntaxRewriter<TDerived> {
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree> tree,
                                           bool& traversalDone,
                                           AttemptStats& stats) {
-        // Apply one removal, and return changed tree.
+        // Apply one rewrite, and return changed tree.
         // traversalDone is set when subsequent calls to transform would not make sense
-        removed = SourceRange::NoLocation;
-        removedChild = SourceRange::NoLocation;
-        removedSuccessor = SourceRange::NoLocation;
+        rewritePoint = SourceRange::NoLocation;
+        rewritePointChildren = SourceRange::NoLocation;
+        rewritePointSuccessor = SourceRange::NoLocation;
 
         auto tree2 = SyntaxRewriter<TDerived>::transform(tree);
 
-        if (removedChild == SourceRange::NoLocation &&
-            removedSuccessor == SourceRange::NoLocation) {
+        if (rewritePointChildren == SourceRange::NoLocation &&
+            rewritePointSuccessor == SourceRange::NoLocation) {
             // we have ran out of nodes of searched size - advance limit
             linesUpperLimit = linesLowerLimit;
             linesLowerLimit /= 2;
             if (linesUpperLimit == 1) {  // tried all possible sizes - finish
                 traversalDone = true;
-            } else if (removed == SourceRange::NoLocation) {
-                // no node removed - retry with new limit
+            } else if (rewritePoint == SourceRange::NoLocation) {
+                // no node rewritten - retry with new limit
                 tree2 = transform(tree, traversalDone, stats);
             }
         }
 
-        stats.typeInfo = removedTypeInfo;
+        stats.typeInfo = rewrittenTypeInfo;
         return tree2;
     }
 
     void moveStartToSuccesor() {
-        // Start next transform from successor of removed node.
+        // Start next transform from successor of rewritten node.
         // Meant be run when you decided to commit removal (i.e you pass just transformed tree for
         // next transform)
-        startPoint = removedSuccessor;
+        startPoint = rewritePointSuccessor;
         state = SKIP_TO_START;
     }
 
     void moveStartToChildOrSuccesor() {
-        // Start next transform from child of removed node if possible, otherwise, from its
+        // Start next transform from child of rewritten node if possible, otherwise, from its
         // successor. Meant to be run when you decide to rollback removal (i.e. you're discarding a
         // just transformed tree)
-        if (removedChild != SourceRange::NoLocation) {
-            startPoint = removedChild;
+        if (rewritePointChildren != SourceRange::NoLocation) {
+            startPoint = rewritePointChildren;
         } else {
-            startPoint = removedSuccessor;
+            startPoint = rewritePointSuccessor;
         }
         state = SKIP_TO_START;
     }
 };
 
 template <typename T>
-bool removeLoop(std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx) {
-    T remover;
+bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx) {
+    T rewriter;
     bool committed = false;
     bool traversalDone = false;
 
     while (!traversalDone) {
         auto stats = AttemptStats(passIdx, stageName);
         ;
-        auto tmpTree = remover.transform(tree, traversalDone, stats);
+        auto tmpTree = rewriter.transform(tree, traversalDone, stats);
         if (traversalDone && tmpTree == tree) {
             break;  // no change - no reason to test
         }
         if (test(tmpTree, stats)) {
             tree = tmpTree;
-            remover.moveStartToSuccesor();
+            rewriter.moveStartToSuccesor();
             committed = true;
         } else {
-            remover.moveStartToChildOrSuccesor();
+            rewriter.moveStartToChildOrSuccesor();
         }
     }
     return committed;

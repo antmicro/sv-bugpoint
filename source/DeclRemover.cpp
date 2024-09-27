@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-#include "OneTimeRemover.hpp"
+#include "OneTimeRewriter.hpp"
 
-class DeclRemover : public OneTimeRemover<DeclRemover> {
+class DeclRemover : public OneTimeRewriter<DeclRemover> {
    public:
     ShouldVisitChildren handle(const FunctionDeclarationSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);
@@ -54,6 +54,6 @@ class DeclRemover : public OneTimeRemover<DeclRemover> {
     }
 };
 
-template bool removeLoop<DeclRemover>(std::shared_ptr<SyntaxTree>& tree,
+template bool rewriteLoop<DeclRemover>(std::shared_ptr<SyntaxTree>& tree,
                                       std::string stageName,
                                       std::string passIdx);

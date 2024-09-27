@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-#include "OneTimeRemover.hpp"
+#include "OneTimeRewriter.hpp"
 
-class ContAssignRemover : public OneTimeRemover<ContAssignRemover> {
+class ContAssignRemover : public OneTimeRewriter<ContAssignRemover> {
    public:
     ShouldVisitChildren handle(const ContinuousAssignSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);
@@ -9,6 +9,6 @@ class ContAssignRemover : public OneTimeRemover<ContAssignRemover> {
     }
 };
 
-template bool removeLoop<ContAssignRemover>(std::shared_ptr<SyntaxTree>& tree,
+template bool rewriteLoop<ContAssignRemover>(std::shared_ptr<SyntaxTree>& tree,
                                             std::string stageName,
                                             std::string passIdx);
