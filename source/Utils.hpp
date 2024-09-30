@@ -77,3 +77,5 @@ class AttemptStats {
 
 bool test(AttemptStats& stats);
 bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info);
+
+std::string prefixLines(const std::string& str, const std::string& linePrefix);

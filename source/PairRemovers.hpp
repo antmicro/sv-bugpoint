@@ -51,7 +51,7 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
             node.sourceRange() == searchedPair.first || node.sourceRange() == searchedPair.second;
         if (isNodeRemovable && found && node.sourceRange() != SourceRange::NoLocation) {
             logType<T>();
-            std::cerr << node.toString() << "\n";
+            std::cerr << prefixLines(node.toString(), "-") << "\n";
             remove(node);
         }
 

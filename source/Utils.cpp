@@ -271,3 +271,12 @@ bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info) {
     tmpFile << SyntaxPrinter::printFile(*tree);
     return test(info);
 }
+
+std::string prefixLines(const std::string& str, const std::string& linePrefix) {
+    std::istringstream sstream(str);
+    std::string line, out;
+    while(getline(sstream, line)) {
+        out += linePrefix + line + '\n';
+    }
+    return out;
+}

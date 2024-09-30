@@ -111,7 +111,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     void removeNode(const T& node, bool isNodeRemovable) {
         if (shouldRemove(node, isNodeRemovable)) {
             logType<T>();
-            std::cerr << node.toString() << "\n";
+            std::cerr << prefixLines(node.toString(), "-") << "\n";
             DERIVED->remove(node);
             rewritePoint = node.sourceRange();
             state = REGISTER_CHILD;
@@ -124,7 +124,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
             logType<TParent>();
             for (auto item : childList) {
                 DERIVED->remove(*item);
-                std::cerr << item->toString();
+                std::cerr << prefixLines(item->toString(), "-");
             }
             std::cerr << "\n";
             rewritePoint = parent.sourceRange();
@@ -135,9 +135,8 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     template <typename TOrig, typename TNew>
     void replaceNode(const TOrig& originalNode, TNew& newNode) {
         logType<TOrig>();
-        // NOTE: this may look weird in multiline cases
-        std::cerr << "-" << originalNode.toString() << "\n";
-        std::cerr << "+" << newNode.toString() << "\n";
+        std::cerr << prefixLines(originalNode.toString(), "-") << "\n";
+        std::cerr << prefixLines(newNode.toString(), "+") << "\n";
         DERIVED->replace(originalNode, newNode);
         rewritePoint = originalNode.sourceRange();
         state = REGISTER_CHILD;
