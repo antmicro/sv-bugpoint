@@ -2,6 +2,9 @@
 
 Copyright (c) 2024 [Antmicro](https://www.antmicro.com)
 
+![sv-bugpoint-logo-github-readme](https://github.com/user-attachments/assets/94caef96-85d6-4e50-8b39-ff9d0f5fe7e7)
+
+
 `sv-bugpoint` minimizes SystemVerilog code while preserving a user-defined property of that code.
 For example, it can be used for acquiring minimal test cases that trigger certain bugs in SystemVerilog tooling.
 
