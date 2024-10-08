@@ -96,6 +96,7 @@ void initOutDir(bool force) {
             exit(0);
         }
     }
+    mkdir(paths.tmpDir);
     if (saveIntermediates)
         mkdir(paths.intermediateDir);
     // NOTE: not removing old files may be misleading (especially having an intermediate dir)

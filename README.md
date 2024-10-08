@@ -50,7 +50,7 @@ sv-bugpoint <OUT_DIR> <CHECK_SCRIPT> <INPUT_SV>
 
 The output directory will be populated with:
 - `sv-bugpoint-minimized.sv` - minimized code that satisfies the assertion checked by the provided script,
-- `sv-bugpoint-tmp.sv` - a copy of the previous file with a removal attempt applied, to be checked with the provided script,
+- `tmp/<INPUT_SV>` - a copy of the previous file with a removal attempt applied, to be checked with the provided script,
 - `sv-bugpoint-trace` - verbose, tab-delimited trace with stats and additional info about each removal attempt ([example](examples/caliptra_verilation_err/sv-bugpoint-trace)).
   It can be turned into a concise, high-level summary with the [`sv-bugpoint-trace_summary script`](scripts/sv-bugpoint-trace_summary) ([example](examples/caliptra_verilation_err/sv-bugpoint-trace_summarized)).
 

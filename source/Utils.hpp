@@ -20,6 +20,7 @@ struct Paths {
     std::string checkScript;
     std::string input;
     std::string output;
+    std::string tmpDir;
     std::string tmpOutput;
     std::string trace;
     std::string dumpSyntax;
@@ -29,7 +30,8 @@ struct Paths {
     Paths(std::string outDir, std::string checkScript, std::string input)
         : outDir(outDir), input(input), checkScript(checkScript) {
         output = outDir + "/sv-bugpoint-minimized.sv";
-        tmpOutput = outDir + "/sv-bugpoint-tmp.sv";
+        tmpDir = outDir + "/tmp/";
+        tmpOutput = tmpDir + std::string(std::filesystem::path(input).filename());
         trace = outDir + "/sv-bugpoint-trace";
         dumpSyntax = outDir + "/sv-bugpoint-dump-syntax";
         dumpAst = outDir + "/sv-bugpoint-dump-ast";
