@@ -81,8 +81,8 @@ void minimize() {
         } while (committed);
 
     } else {
-        std::cerr << "sv-bugpoint: failed to load " << paths.input << " file "
-                  << treeOrErr.error().second << "\n";
+        PRINTF_ERR("failed to load '%s' file: %s\n", paths.input.c_str(),
+                   std::string(treeOrErr.error().second).c_str());
         exit(1);
     }
 }
@@ -109,8 +109,8 @@ void initOutDir(bool force) {
 void dryRun() {
     auto info = AttemptStats("-", "dryRun");
     if (!test(info)) {
-        std::cerr << "sv-bugpoint: '" << paths.checkScript << " " << paths.tmpOutput
-                  << "' exited with non-zero on dry run with unmodified input.\n";
+        PRINTF_ERR("'%s %s' exited with non-zero on dry run with unmodified input\n",
+                   paths.checkScript.c_str(), paths.tmpOutput.c_str());
         exit(1);
     }
 }
