@@ -3,8 +3,11 @@
 #include <slang/ast/ASTVisitor.h>
 #include <slang/syntax/SyntaxPrinter.h>
 #include <slang/syntax/SyntaxVisitor.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <cstring>
 
 #ifdef __GLIBCXX__
 #include <cxxabi.h>
@@ -12,7 +15,7 @@ std::string tryDemangle(const char* mangled) {
     int rc;
     char* out = abi::__cxa_demangle(mangled, NULL, NULL, &rc);
     if (rc != 0) {
-        std::cerr << "demangling error!\n";
+        PRINTF_ERR("demangling error\n");
         exit(1);
     }
     std::string outStr = out;
@@ -138,8 +141,8 @@ void dumpTrees() {
 
         printAst(compilation.getRoot(), astDumpFile);
     } else {
-        std::cerr << "sv-bugpoint: failed to load " << paths.input << " file "
-                  << treeOrErr.error().second << "\n";
+        PRINTF_ERR("failed to load '%s' file: %s\n", paths.input.c_str(),
+                   std::string(treeOrErr.error().second).c_str());
         exit(1);
     }
 }
@@ -164,8 +167,8 @@ void copyFile(const std::string& from, const std::string& to) {
     try {
         std::filesystem::copy(from, to, std::filesystem::copy_options::overwrite_existing);
     } catch (const std::filesystem::filesystem_error& err) {
-        std::cerr << "sv-bugpoint: failed to copy " << from << "to" << to << ": "
-                  << err.code().message() << "\n";
+        PRINTF_ERR("failed to copy '%s' to '%s': %s\n", from.c_str(), to.c_str(),
+                   err.code().message().c_str());
         exit(1);
     }
 }
@@ -174,8 +177,8 @@ void mkdir(const std::string& path) {
     try {
         std::filesystem::create_directory(path);
     } catch (const std::filesystem::filesystem_error& err) {
-        std::cerr << "sv-bugpoint: failed to make directory " << path << ": "
-                  << err.code().message() << "\n";
+        PRINTF_ERR("failed to make directory '%s': %s\n", path.c_str(),
+                   err.code().message().c_str());
         exit(1);
     }
 }
@@ -231,13 +234,12 @@ bool test(AttemptStats& stats) {
     stats.begin();
     pid_t pid = fork();
     if (pid == -1) {
-        perror("fork failed");
+        PRINTF_ERR("fork failed: %s\n", strerror(errno));
         exit(1);
     } else if (pid == 0) {  // we are inside child
         const char* const argv[] = {paths.checkScript.c_str(), paths.tmpOutput.c_str(), NULL};
         if (execv(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
-            std::string err = "sv-bugpoint: failed to lanuch " + paths.checkScript;
-            perror(err.c_str());
+            PRINTF_ERR("failed to launch '%s': %s\n", paths.checkScript.c_str(), strerror(errno));
             kill(getppid(), SIGINT);  // terminate parent
             exit(1);
         }
