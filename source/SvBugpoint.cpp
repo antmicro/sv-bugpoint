@@ -96,12 +96,22 @@ void initOutDir(bool force) {
             exit(0);
         }
     }
+    mkdir(paths.tmpDir);
     if (saveIntermediates)
         mkdir(paths.intermediateDir);
     // NOTE: not removing old files may be misleading (especially having an intermediate dir)
     // Maybe add some kind of purge?
     copyFile(paths.input, paths.output);
+    copyFile(paths.input, paths.tmpOutput);
     AttemptStats::writeHeader();
+}
+
+void dryRun() {
+    auto info = AttemptStats("-", "dryRun");
+    if(!test(info)) {
+        std::cerr << "sv-bugpoint: '" << paths.checkScript << " " << paths.tmpOutput << "' exited with non-zero on dry run with unmodified input.\n";
+        exit(1);
+    }
 }
 
 void usage() {
@@ -142,6 +152,8 @@ int main(int argc, char** argv) {
     if (dump) {
         dumpTrees();
     }
+
+    dryRun();
 
     minimize();
 }
