@@ -29,3 +29,10 @@ target_precompile_headers(sv-bugpoint PUBLIC
   <slang/syntax/SyntaxPrinter.h>
   <slang/text/SourceLocation.h>
 )
+
+if (NOT MSVC)
+    target_compile_options(sv-bugpoint PRIVATE -Wall -Wextra -pedantic -Wno-reorder -Wno-unused-parameter)
+    if(DEFINED ENV{CI})
+      target_compile_options(sv-bugpoint PRIVATE -Werror)
+    endif()
+endif()
