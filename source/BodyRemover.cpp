@@ -25,5 +25,5 @@ class BodyRemover : public OneTimeRewriter<BodyRemover> {
 };
 
 template bool rewriteLoop<BodyRemover>(std::shared_ptr<SyntaxTree>& tree,
-                                      std::string stageName,
-                                      std::string passIdx);
+                                       std::string stageName,
+                                       std::string passIdx);

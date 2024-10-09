@@ -10,5 +10,5 @@ class ModportRemover : public OneTimeRewriter<ModportRemover> {
 };
 
 template bool rewriteLoop<ModportRemover>(std::shared_ptr<SyntaxTree>& tree,
-                                         std::string stageName,
-                                         std::string passIdx);
+                                          std::string stageName,
+                                          std::string passIdx);

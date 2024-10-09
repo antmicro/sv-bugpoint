@@ -23,9 +23,11 @@ lint: fmt_check shellcheck
 
 .PHONY: fmt_check
 fmt_check:
+	FMT_FAILED=0; \
 	for i in source/*.cpp source/*.hpp; do \
-	  diff "$$i" <(clang-format-14 "$$i")  --label "original $$i" --label "formatted $$i" --color=always -u; \
-	done
+	  diff "$$i" <(clang-format-14 "$$i")  --label "original $$i" --label "formatted $$i" --color=always -u || FMT_FAILED=1; \
+	done; \
+	exit "$$FMT_FAILED"
 	@echo # blank line for consistency
 
 
@@ -40,4 +42,4 @@ shellcheck:
 .PHONY: shellcheck
 shellcheck_autofix:
 	shellcheck $(SCRIPTS) -f diff --color || exit 0
-	shellcheck $(SCRIPTS) -f diff | git apply
+	shellcheck $(SCRIPTS) -f diff | git apply --allow-empty
