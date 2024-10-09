@@ -10,9 +10,9 @@ using namespace slang::ast;
 using namespace slang;
 
 bool rewriteLoop(PairRemover rewriter,
-                std::shared_ptr<SyntaxTree>& tree,
-                std::string stageName,
-                std::string passIdx) {
+                 std::shared_ptr<SyntaxTree>& tree,
+                 std::string stageName,
+                 std::string passIdx) {
     bool committed = false;
     bool traversalDone = false;
 
@@ -108,8 +108,9 @@ void initOutDir(bool force) {
 
 void dryRun() {
     auto info = AttemptStats("-", "dryRun");
-    if(!test(info)) {
-        std::cerr << "sv-bugpoint: '" << paths.checkScript << " " << paths.tmpOutput << "' exited with non-zero on dry run with unmodified input.\n";
+    if (!test(info)) {
+        std::cerr << "sv-bugpoint: '" << paths.checkScript << " " << paths.tmpOutput
+                  << "' exited with non-zero on dry run with unmodified input.\n";
         exit(1);
     }
 }

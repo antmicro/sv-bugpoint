@@ -10,5 +10,5 @@ class ImportsRemover : public OneTimeRewriter<ImportsRemover> {
 };
 
 template bool rewriteLoop<ImportsRemover>(std::shared_ptr<SyntaxTree>& tree,
-                                         std::string stageName,
-                                         std::string passIdx);
+                                          std::string stageName,
+                                          std::string passIdx);

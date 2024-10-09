@@ -57,7 +57,8 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
         }
 
         if (state == REGISTER_CHILD && node.sourceRange() != SourceRange::NoLocation &&
-            node.sourceRange() != rewritePoint) {  // avoid marking rewritten node as its own children
+            node.sourceRange() !=
+                rewritePoint) {  // avoid marking rewritten node as its own children
             rewritePointChildren = node.sourceRange();
             state = EXIT_REWRITE_POINT;
             return;

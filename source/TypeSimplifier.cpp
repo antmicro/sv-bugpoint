@@ -11,22 +11,15 @@ class IsPrimitive : public SyntaxVisitor<IsPrimitive> {
         isPrimitive = false;
     }
 
-    void handle(const IntegerTypeSyntax& t) {
-        isPrimitive = true;
-    }
+    void handle(const IntegerTypeSyntax& t) { isPrimitive = true; }
 
-    void handle(const KeywordTypeSyntax& t) {
-        isPrimitive = true;
-    }
+    void handle(const KeywordTypeSyntax& t) { isPrimitive = true; }
 
-    void handle(const ImplicitTypeSyntax& t) {
-        isPrimitive = true;
-    }
+    void handle(const ImplicitTypeSyntax& t) { isPrimitive = true; }
 };
 
-
 class TypeSimplifier : public OneTimeRewriter<TypeSimplifier> {
-   // replace references to user-defined types with int
+    // replace references to user-defined types with int
    public:
     bool canSimplify(not_null<const DataTypeSyntax*> node) {
         IsPrimitive checker;
@@ -35,19 +28,21 @@ class TypeSimplifier : public OneTimeRewriter<TypeSimplifier> {
     }
 
     IntegerTypeSyntax* makeIntNode(SourceLocation location) {
-          auto token = Token(alloc, parsing::TokenKind::IntKeyword, {&SingleSpace, 1}, "int", location);
-          auto node = IntegerTypeSyntax(SyntaxKind::IntType, token, {}, SyntaxList<VariableDimensionSyntax>({}));
-          return alloc.emplace<IntegerTypeSyntax>(node);
+        auto token =
+            Token(alloc, parsing::TokenKind::IntKeyword, {&SingleSpace, 1}, "int", location);
+        auto node = IntegerTypeSyntax(SyntaxKind::IntType, token, {},
+                                      SyntaxList<VariableDimensionSyntax>({}));
+        return alloc.emplace<IntegerTypeSyntax>(node);
     }
 
     ShouldVisitChildren handle(const DataTypeSyntax& node, bool isNodeRemovable) {
         if (state == REMOVAL_ALLOWED && canSimplify(&node)) {
-          replaceNode(node, *makeIntNode(node.sourceRange().start()));
+            replaceNode(node, *makeIntNode(node.sourceRange().start()));
         }
         return VISIT_CHILDREN;
     }
 };
 
 template bool rewriteLoop<TypeSimplifier>(std::shared_ptr<SyntaxTree>& tree,
-                                      std::string stageName,
-                                      std::string passIdx);
+                                          std::string stageName,
+                                          std::string passIdx);

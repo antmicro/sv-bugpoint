@@ -55,5 +55,5 @@ class DeclRemover : public OneTimeRewriter<DeclRemover> {
 };
 
 template bool rewriteLoop<DeclRemover>(std::shared_ptr<SyntaxTree>& tree,
-                                      std::string stageName,
-                                      std::string passIdx);
+                                       std::string stageName,
+                                       std::string passIdx);
