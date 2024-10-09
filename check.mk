@@ -42,4 +42,4 @@ shellcheck:
 .PHONY: shellcheck
 shellcheck_autofix:
 	shellcheck $(SCRIPTS) -f diff --color || exit 0
-	shellcheck $(SCRIPTS) -f diff | git apply
+	shellcheck $(SCRIPTS) -f diff | git apply --allow-empty
