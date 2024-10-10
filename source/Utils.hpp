@@ -89,3 +89,17 @@ std::string prefixLines(const std::string& str, const std::string& linePrefix);
         fprintf(stderr, "sv-bugpoint: "); \
         fprintf(stderr, __VA_ARGS__); \
     } while (0)
+
+#define PRINTF_INTERNAL_ERR(...) \
+    do { \
+        PRINTF_ERR("Internal error: %s:%d: ", __FILE__, __LINE__); \
+        fprintf(stderr, __VA_ARGS__); \
+    } while (0)
+
+#define ASSERT(cond, msg) \
+    do { \
+        if (!(cond)) { \
+            PRINTF_INTERNAL_ERR("Assertion `%s` failed: %s\n", #cond, msg); \
+            exit(1); \
+        } \
+    } while (0)
