@@ -2,3 +2,4 @@
 BasedOnStyle: Chromium
 ColumnLimit:  100
 IndentWidth: 4
+AlignEscapedNewlines: DontAlign

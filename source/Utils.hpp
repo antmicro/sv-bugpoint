@@ -84,8 +84,8 @@ std::string prefixLines(const std::string& str, const std::string& linePrefix);
 
 // NOTE: doing it as variadic func rather than macro would prevent
 // compiler from issuing warnings about incorrect format string
-#define PRINTF_ERR(...)                   \
-    do {                                  \
+#define PRINTF_ERR(...) \
+    do { \
         fprintf(stderr, "sv-bugpoint: "); \
-        fprintf(stderr, __VA_ARGS__);     \
+        fprintf(stderr, __VA_ARGS__); \
     } while (0)
