@@ -14,10 +14,7 @@
 std::string tryDemangle(const char* mangled) {
     int rc;
     char* out = abi::__cxa_demangle(mangled, NULL, NULL, &rc);
-    if (rc != 0) {
-        PRINTF_ERR("demangling error\n");
-        exit(1);
-    }
+    ASSERT(rc == 0, "demangling failed");
     std::string outStr = out;
     free(out);
     return outStr;
