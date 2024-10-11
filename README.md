@@ -39,6 +39,7 @@ First, you need to prepare:
 - a script that takes the path to a SystemVerilog file as the first argument and asserts that the same bug (or another property you wish to preserve) is still occurring.
 It should exit with 0 if the assertion is successful.
 For reference, see [`examples/caliptra_verilation_err/sv-bugpoint-check.sh`](examples/caliptra_verilation_err/sv-bugpoint-check.sh) and [`examples/caliptra_vcd/sv-bugpoint-check.sh`](examples/caliptra_vcd/sv-bugpoint-check.sh).
+The script can be written in any language you are comfortable with, it just needs to be an executable. See the Python example: [`examples/caliptra_verilation_err/sv-bugpoint-check.py`](examples/caliptra_verilation_err/sv-bugpoint-check.py).
 - SystemVerilog code that `sv-bugpoint` will attempt to minimize. In order to get one from a multi-file design,
 you can use a preprocessor of your choice (e.g `verilator -E -P [other flags...] > sv-bugpoint-input.sv`).
 
