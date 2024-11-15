@@ -36,3 +36,5 @@ if (NOT MSVC)
       target_compile_options(sv-bugpoint PRIVATE -Werror)
     endif()
 endif()
+
+install(TARGETS sv-bugpoint RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
