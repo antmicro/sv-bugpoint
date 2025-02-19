@@ -12,7 +12,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(slang)
 
 add_executable(sv-bugpoint source/SvBugpoint.cpp source/Utils.cpp source/PairRemovers.cpp source/BodyRemover.cpp
-  source/BodyPartsRemover.cpp source/DeclRemover.cpp source/InstantationRemover.cpp source/ModportRemover.cpp source/ContAssignRemover.cpp source/ParamAssignRemover.cpp
+  source/BodyPartsRemover.cpp source/DeclRemover.cpp source/InstantationRemover.cpp source/BindRemover.cpp source/ModportRemover.cpp source/ContAssignRemover.cpp source/ParamAssignRemover.cpp
   source/StatementsRemover.cpp source/MemberRemover.cpp source/ImportsRemover.cpp source/TypeSimplifier.cpp)
 
 target_link_libraries(sv-bugpoint PRIVATE slang::slang)

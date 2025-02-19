@@ -14,6 +14,7 @@ class ParamAssignRemover;
 class ContAssignRemover;
 class ModportRemover;
 class InstantationRemover;
+class BindRemover;
 class TypeSimplifier;
 
 template <typename T>
