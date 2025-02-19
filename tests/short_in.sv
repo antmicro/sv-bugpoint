@@ -60,5 +60,7 @@ module serial_adder #(WIDTH=32) (
     assign c[0] = cin;
     assign cout = c[WIDTH];
 
+    bind full_adder full_adder2 bound_adder (.a(a), .b(b), .cin(cin), .s(s), .cout(cout));
+
 endmodule
 
