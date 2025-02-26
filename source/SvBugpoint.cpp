@@ -52,23 +52,16 @@ bool pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx = "-") {
     return commited;
 }
 
-bool removeVerilatorConfig() {
-    auto info = AttemptStats("-", "verilatorConfigRemover");
-    std::ifstream inputFile(paths.input);
-    std::ofstream testFile(paths.tmpOutput);
-    std::string line;
-    while (std::getline(inputFile, line) && line != "`verilator_config") {
-        testFile << line << "\n";
-    }
-    testFile << std::flush;
-    if (line == "`verilator_config")
-        return test(info);
-    else
-        return false;
-}
-
 void minimize() {
-    removeVerilatorConfig();
+    // Append a dummy variable to the end of the file
+    // Slang appends unknown directives to the next valid Syntax node, but
+    // if this isn't such directives, they are not appended to anything.
+    // This dummy variable allows to remove this directive as part of the DeclRemover pass.
+    // Example of such directive is `verilator_config
+    std::ofstream testFile(paths.output, std::ios::app);
+    testFile << "int __SV_BUGPOINT_;" << std::endl;
+    testFile << std::flush;
+    testFile.close();
 
     auto treeOrErr = SyntaxTree::fromFile(paths.output);
 

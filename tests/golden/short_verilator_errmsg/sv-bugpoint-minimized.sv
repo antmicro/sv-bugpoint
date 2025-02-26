@@ -13,4 +13,3 @@ module serial_adder #() ();
     assign foo.c = 0;
 
 endmodule
-
