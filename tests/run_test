@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 
 # usage: run_test test_name checkscript.sh input.sv
@@ -8,13 +8,19 @@ actual_file=out/"$1"/sv-bugpoint-minimized.sv
 [ -e "$actual_file" ] && rm "$actual_file" # to not get fake PASS if bugpoint did not overwrite old result
 golden_file=golden/"$1"/sv-bugpoint-minimized.sv
 
-bugpoint_msg=$(sv-bugpoint out/"$1" "$2" "$3" --force 2>&1) || (printf "%s\n" "$bugpoint_msg" >&2; exit 1)
+OUT_DIR=out/"$1"
+shift
+TEST_SCRIPT="$1"
+shift
+
+bugpoint_msg=$(sv-bugpoint "${OUT_DIR}" "${TEST_SCRIPT}" "$@" --force 2>&1) || (printf "%s\n" "$bugpoint_msg" >&2; exit 1)
 
 diff "$golden_file" "$actual_file" --color=always >&2
 
 EXIT_CODE=$?
 
 [ "$EXIT_CODE" -eq 0 ] && printf "PASSED\n\n" || printf "FAILED\n\n"
+GOLDEN="${GOLDEN:-}"
 if [ -n "$GOLDEN" ]; then
   mkdir -p "$(dirname "$golden_file")"
   cp "$actual_file" "$golden_file"

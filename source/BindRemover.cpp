@@ -11,4 +11,5 @@ class BindRemover : public OneTimeRewriter<BindRemover> {
 
 template bool rewriteLoop<BindRemover>(std::shared_ptr<SyntaxTree>& tree,
                                        std::string stageName,
-                                       std::string passIdx);
+                                       std::string passIdx,
+                                       SvBugpoint* svBugpoint);

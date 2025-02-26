@@ -19,4 +19,5 @@ class StatementsRemover : public OneTimeRewriter<StatementsRemover> {
 
 template bool rewriteLoop<StatementsRemover>(std::shared_ptr<SyntaxTree>& tree,
                                              std::string stageName,
-                                             std::string passIdx);
+                                             std::string passIdx,
+                                             SvBugpoint* svBugpoint);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <slang/syntax/SyntaxVisitor.h>
 #include <iosfwd>
+#include "SvBugpoint.hpp"
 #include "Utils.hpp"
 
 #define DERIVED static_cast<TDerived*>(this)
@@ -46,6 +47,8 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
             if (child)
                 child->visit(*DERIVED, node.isChildOptional(i));
         }
+        if (node.getChildCount() == 0)  // leaf node
+            node.visit(*DERIVED, true);
     }
 
     // Do some state bookkeeping, try to call type-specific handler, and visit node's children.
@@ -78,7 +81,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
             if (DERIVED->handle(node, isNodeRemovable) == VISIT_CHILDREN) {
                 DERIVED->visitDefault(node);
             }
-        } else {
+        } else if (node.getChildCount() > 0) {
             DERIVED->visitDefault(node);
         }
 
@@ -193,19 +196,22 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
 };
 
 template <typename T>
-bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx) {
+bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
+                 std::string stageName,
+                 std::string passIdx,
+                 SvBugpoint* svBugpoint) {
     T rewriter;
     bool committed = false;
     bool traversalDone = false;
 
     while (!traversalDone) {
-        auto stats = AttemptStats(passIdx, stageName);
+        auto stats = AttemptStats(passIdx, stageName, svBugpoint);
         ;
         auto tmpTree = rewriter.transform(tree, traversalDone, stats);
         if (traversalDone && tmpTree == tree) {
             break;  // no change - no reason to test
         }
-        if (test(tmpTree, stats)) {
+        if (svBugpoint->test(tmpTree, stats)) {
             tree = tmpTree;
             rewriter.moveStartToSuccesor();
             committed = true;

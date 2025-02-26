@@ -19,4 +19,5 @@ class BodyPartsRemover : public OneTimeRewriter<BodyPartsRemover> {
 
 template bool rewriteLoop<BodyPartsRemover>(std::shared_ptr<SyntaxTree>& tree,
                                             std::string stageName,
-                                            std::string passIdx);
+                                            std::string passIdx,
+                                            SvBugpoint* svBugpoint);

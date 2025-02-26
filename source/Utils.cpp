@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <cstring>
+#include "SvBugpoint.hpp"
 
 #ifdef __GLIBCXX__
 #include <cxxabi.h>
@@ -124,26 +125,6 @@ void printAst(const RootSymbol& root, std::ostream& file) {
     AstPrinter(file).visit(root);
 }
 
-void dumpTrees() {
-    auto treeOrErr = SyntaxTree::fromFile(paths.input);
-    if (treeOrErr) {
-        auto tree = *treeOrErr;
-
-        std::ofstream syntaxDumpFile(paths.dumpSyntax), astDumpFile(paths.dumpAst);
-        printSyntaxTree(tree, syntaxDumpFile);
-
-        Compilation compilation;
-        compilation.addSyntaxTree(tree);
-        compilation.getAllDiagnostics();  // kludge for launching full elaboration
-
-        printAst(compilation.getRoot(), astDumpFile);
-    } else {
-        PRINTF_ERR("failed to load '%s' file: %s\n", paths.input.c_str(),
-                   std::string(treeOrErr.error().second).c_str());
-        exit(1);
-    }
-}
-
 std::string toString(SourceRange sourceRange) {
     if (sourceRange == SourceRange::NoLocation)
         return "NO_LOCATION";
@@ -152,13 +133,6 @@ std::string toString(SourceRange sourceRange) {
                ", offsetStart: " + std::to_string(sourceRange.start().offset()) +
                ", offsetEnd: " + std::to_string(sourceRange.end().offset());
 }
-
-Paths paths;
-// Flag for saving intermediate output of each attempt
-bool saveIntermediates = false;
-// Global counter incremented after end of each attempt
-// Meant mainly for setting up conditional breakpoints based on trace
-int currentAttemptIdx = 0;
 
 void copyFile(const std::string& from, const std::string& to) {
     try {
@@ -186,20 +160,19 @@ int countLines(const std::string& filename) {
 }
 
 AttemptStats& AttemptStats::begin() {
-    linesBefore = countLines(paths.output);
+    linesBefore = countLines(svBugpoint->getOutput());
     startTime = std::chrono::high_resolution_clock::now();
-    idx = currentAttemptIdx;
+    idx = svBugpoint->getCurrentAttemptIdx();
     return *this;
 }
 AttemptStats& AttemptStats::end(bool committed) {
     this->committed = committed;
-    linesAfter = countLines(paths.output);
+    linesAfter = countLines(svBugpoint->getTmpOutput());
     endTime = std::chrono::high_resolution_clock::now();
-    if (saveIntermediates) {
-        copyFile(paths.tmpOutput,
-                 paths.intermediateDir + "/attempt" + std::to_string(currentAttemptIdx) + ".sv");
+    if (svBugpoint->getSaveIntermediates()) {
+        copyFile(svBugpoint->getTmpOutput(), svBugpoint->getAttemptOutput());
     }
-    currentAttemptIdx++;
+    svBugpoint->updateCurrentAttemptIdx();
     return *this;
 }
 
@@ -209,66 +182,19 @@ std::string AttemptStats::toStr() const {
     auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration << "ms\t"
-        << idx << '\t' << typeInfo << "\n";
+        << idx << '\t' << typeInfo << '\t' << svBugpoint->getInput() << "\n";
     return tmp.str();
 }
 
 void AttemptStats::report() {
     std::cerr << toStr();
-    std::ofstream file(paths.trace, std::ios_base::app);
+    std::ofstream file(svBugpoint->getTrace(), std::ios_base::app);
     file << toStr() << std::flush;
 }
 
-void AttemptStats::writeHeader() {
-    std::ofstream file(paths.trace);
-    file << "pass\tstage\tlines_removed\tcommitted\ttime\tidx\ttype_info\n";
-}
-
-bool test(AttemptStats& stats) {
-    // Execute ./sv-bugpoint-check.sh tmpFile.
-    // On success (zero exit code) replace minimized file with tmp, and return true.
-    // On fail (non-zero exit code) return false.
-    stats.begin();
-    pid_t pid = fork();
-    if (pid == -1) {
-        PRINTF_ERR("fork failed: %s\n", strerror(errno));
-        exit(1);
-    } else if (pid == 0) {  // we are inside child
-        const char* const argv[] = {paths.checkScript.c_str(), paths.tmpOutput.c_str(), NULL};
-        if (execv(argv[0], const_cast<char* const*>(argv))) {  // replace child with prog
-            PRINTF_ERR("failed to launch '%s': %s\n", paths.checkScript.c_str(), strerror(errno));
-            kill(getppid(), SIGINT);  // terminate parent
-            exit(1);
-        }
-    } else {  // we are in parent
-        int wstatus;
-        int rc = waitpid(pid, &wstatus, 0);
-        if (rc <= 0 || !WIFEXITED(wstatus)) {
-            perror("waitpid failed");
-            exit(1);
-        }
-        if (WEXITSTATUS(wstatus)) {
-            stats.end(false).report();
-            return false;
-        } else {
-            std::filesystem::copy(paths.tmpOutput, paths.output,
-                                  std::filesystem::copy_options::overwrite_existing);
-            stats.end(true).report();
-            return true;
-        }
-    }
-
-    return false;  // just to make compiler happy - will never get here
-}
-
-bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& info) {
-    // Write given tree to tmp file and execute ./sv-bugpoint-check.sh tmpFile.
-    std::ofstream tmpFile;
-    tmpFile.rdbuf()->pubsetbuf(
-        0, 0);  // Enable unbuffered io. Has to be called before open to be effective
-    tmpFile.open(paths.tmpOutput);
-    tmpFile << SyntaxPrinter::printFile(*tree);
-    return test(info);
+void AttemptStats::writeHeader(std::string traceFilePath) {
+    std::ofstream file(traceFilePath);
+    file << "pass\tstage\tlines_removed\tcommitted\ttime\tidx\ttype_info\tinput_file\n";
 }
 
 std::string prefixLines(const std::string& str, const std::string& linePrefix) {

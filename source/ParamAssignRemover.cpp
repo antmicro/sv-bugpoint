@@ -11,4 +11,5 @@ class ParamAssignRemover : public OneTimeRewriter<ParamAssignRemover> {
 
 template bool rewriteLoop<ParamAssignRemover>(std::shared_ptr<SyntaxTree>& tree,
                                               std::string stageName,
-                                              std::string passIdx);
+                                              std::string passIdx,
+                                              SvBugpoint* svBugpoint);

@@ -8,7 +8,7 @@ increase_errmsg_compat() {
  sed 's/note In/In/g' | sed "s/'serial_adder'/serial_adder/g"
 }
 
-actual=$(verilator --cc -Wno-WIDTH --top-module serial_adder "$1" 2>&1 1>/dev/null |
+actual=$(verilator --cc -Wno-WIDTH --top-module serial_adder "$@" 2>&1 1>/dev/null |
 sv-bugpoint-strip-verilator-errmsg | increase_errmsg_compat)
 
 expected=$(cat <<EOF

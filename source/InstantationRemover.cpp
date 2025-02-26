@@ -11,4 +11,5 @@ class InstantationRemover : public OneTimeRewriter<InstantationRemover> {
 
 template bool rewriteLoop<InstantationRemover>(std::shared_ptr<SyntaxTree>& tree,
                                                std::string stageName,
-                                               std::string passIdx);
+                                               std::string passIdx,
+                                               SvBugpoint* svBugpoint);

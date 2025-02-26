@@ -1,1 +1,0 @@
-../examples/caliptra_vcd/sv-bugpoint-input.sv

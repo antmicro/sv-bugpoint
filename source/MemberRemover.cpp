@@ -43,4 +43,5 @@ class MemberRemover : public OneTimeRewriter<MemberRemover> {
 
 template bool rewriteLoop<MemberRemover>(std::shared_ptr<SyntaxTree>& tree,
                                          std::string stageName,
-                                         std::string passIdx);
+                                         std::string passIdx,
+                                         SvBugpoint* svBugpoint);

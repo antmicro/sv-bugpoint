@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <slang/syntax/SyntaxTree.h>
+#include "SvBugpoint.hpp"
 
 using namespace slang::syntax;
 
@@ -15,7 +16,11 @@ class ContAssignRemover;
 class ModportRemover;
 class InstantationRemover;
 class BindRemover;
+class ModuleRemover;
 class TypeSimplifier;
 
 template <typename T>
-bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree, std::string stageName, std::string passIdx);
+bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
+                 std::string stageName,
+                 std::string passIdx,
+                 SvBugpoint* svBugpoint);

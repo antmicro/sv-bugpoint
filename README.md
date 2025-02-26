@@ -40,24 +40,26 @@ First, you need to prepare:
 It should exit with 0 if the assertion is successful.
 For reference, see [`examples/caliptra_verilation_err/sv-bugpoint-check.sh`](examples/caliptra_verilation_err/sv-bugpoint-check.sh) and [`examples/caliptra_vcd/sv-bugpoint-check.sh`](examples/caliptra_vcd/sv-bugpoint-check.sh).
 The script can be written in any language you are comfortable with, it just needs to be an executable. See the Python example: [`examples/caliptra_verilation_err/sv-bugpoint-check.py`](examples/caliptra_verilation_err/sv-bugpoint-check.py).
-- SystemVerilog code that `sv-bugpoint` will attempt to minimize. In order to get one from a multi-file design,
-you can use a preprocessor of your choice (e.g `verilator -E -P [other flags...] > sv-bugpoint-input.sv`).
+- SystemVerilog code that `sv-bugpoint` will attempt to minimize.
 
 After that, run:
 
 ```sh
-sv-bugpoint <OUT_DIR> <CHECK_SCRIPT> <INPUT_SV>
+sv-bugpoint <OUT_DIR> <CHECK_SCRIPT> <INPUT_SV> [<INPUT_SV>]
 ```
 
 The output directory will be populated with:
-- `sv-bugpoint-minimized.sv` - minimized code that satisfies the assertion checked by the provided script,
+- `sv-bugpoint-minimized.sv` - minimized code that satisfies the assertion checked by the provided script. It contains concatenated output of every input file,
+- `sv-bugpoint-<INPUT_SV>` - minimalized code for each input file,
 - `tmp/<INPUT_SV>` - a copy of the previous file with a removal attempt applied, to be checked with the provided script,
-- `sv-bugpoint-trace` - verbose, tab-delimited trace with stats and additional info about each removal attempt ([example](examples/caliptra_verilation_err/sv-bugpoint-trace)).
+- `sv-bugpoint-trace<INPUT_SV>` - verbose, tab-delimited trace with stats and additional info about each removal attempt ([example](examples/caliptra_verilation_err/sv-bugpoint-trace)).
   It can be turned into a concise, high-level summary with the [`sv-bugpoint-trace_summary script`](scripts/sv-bugpoint-trace_summary) ([example](examples/caliptra_verilation_err/sv-bugpoint-trace_summarized)).
 
 There are flags that enable additional dumps:
 - `--save-intermediates` saves each removal attempt in `<OUT_DIR>/intermediates/attempt<index>.sv`.
 - `--dump-trees` saves dumps of Slang's AST.
+
+To get more information about available flags, run `sv-bugpoint --help`.
 
 ### Automatically generating check scripts
 

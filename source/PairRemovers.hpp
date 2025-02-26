@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+#pragma once
 #include <slang/syntax/SyntaxVisitor.h>
 #include "Utils.hpp"
 
