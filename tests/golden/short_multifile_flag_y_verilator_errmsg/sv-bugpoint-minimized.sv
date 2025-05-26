@@ -9,6 +9,8 @@
 
 
 
+
+
 typedef struct {
         int b;
 } struct_foo;
@@ -22,3 +24,4 @@ module serial_adder #() ();
     assign foo.c = 0;
 
 endmodule
+

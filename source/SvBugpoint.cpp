@@ -120,19 +120,7 @@ bool SvBugpoint::pass(std::shared_ptr<SyntaxTree>& tree, const std::string& pass
 }
 
 void SvBugpoint::minimize() {
-    for (size_t i = 0; i < paths.size(); i++) {
-        currentPathIdx = i;
-        // Append a dummy variable to the end of the file
-        // Slang appends unknown directives to the next valid Syntax node, but
-        // if no such node exists, they are not appended to anything.
-        // This dummy variable allows to remove this directive as part of the DeclRemover pass.
-        // Example of such directive is `verilator_config
-        std::ofstream testFile(getOutput(), std::ios::app);
-        testFile << "int __SV_BUGPOINT_" << currentPathIdx << "_;" << std::endl;
-        testFile << std::flush;
-        testFile.close();
-    }
-
+    removeVerilatorConfig();
     bool anyChange = true;
     while (anyChange) {
         anyChange = false;
@@ -180,6 +168,35 @@ void SvBugpoint::minimize() {
                            std::string(treeOrErr.error().second).c_str());
                 exit(1);
             }
+        }
+    }
+}
+
+void SvBugpoint::removeVerilatorConfig() {
+    auto info = AttemptStats("-", "verilatorConfigRemover", this);
+    for (size_t i = 0; i < paths.size(); i++) {
+        currentPathIdx = i;
+        std::ifstream inputFile(getOutput());
+        std::ofstream testFile(getTmpOutput());
+        std::string line;
+        bool doSkip = false;
+        bool skippedSomething = false;
+        while (std::getline(inputFile, line)) {
+            if (line == "`verilator_config") {
+                doSkip = true;
+                skippedSomething = true;
+            } else if (doSkip && line.starts_with("`begin_keywords")) {
+                doSkip = false;
+                // There is chance that `begin_keywords is meant to do more than
+                // merely exit configuration block, so we don't skip it.
+                testFile << line << "\n";
+            } else if (!doSkip) {
+                testFile << line << "\n";
+            }
+        }
+        testFile << std::flush;
+        if (skippedSomething) {  // no reason to test if no modification was done
+            test(info);
         }
     }
 }

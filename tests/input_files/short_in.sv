@@ -36,6 +36,9 @@ typedef struct {
         int b;
 } struct_foo;
 
+`verilator_config
+lint_off -rule UNUSED -file "*/rtl/prim_onehot_check.sv" -match "Signal is not used: 'clk_i'"
+`begin_keywords "1800-2012"
 module serial_adder #(WIDTH=32) (
         input  [WIDTH-1:0] a,
         input  [WIDTH-1:0] b,
@@ -64,3 +67,5 @@ module serial_adder #(WIDTH=32) (
 
 endmodule
 
+`verilator_config
+lint_off -rule UNUSED -file "*/rtl/prim_onehot_check.sv" -match "Signal is not used: 'clk_i'"

@@ -27,6 +27,7 @@ class SvBugpoint {
     void setCurrentAttemptIdx(int idx) { currentAttemptIdx = idx; }
     void dryRun();
     void initOutDir();
+    void removeVerilatorConfig();
     void minimize();
     bool pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx = "-");
 
