@@ -3,6 +3,7 @@
 #include <slang/syntax/SyntaxTree.h>
 #include <slang/text/SourceManager.h>
 #include <sys/wait.h>
+#include <filesystem>
 #include <iostream>
 #include "OneTimeRewritersFwd.hpp"
 #include "PairRemovers.hpp"
@@ -73,7 +74,7 @@ bool SvBugpoint::test(AttemptStats& stats) {
         } else {
             stats.end(true).report();
             std::error_code ec;
-            std::filesystem::copy(getTmpOutput(), getOutput(),
+            std::filesystem::copy(getTmpFile(), getMinimizedFile(),
                                   std::filesystem::copy_options::overwrite_existing, ec);
             if (ec) {
                 std::cerr << "Error copying file: " << ec.message() << std::endl;
@@ -91,7 +92,7 @@ bool SvBugpoint::test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats) {
     std::ofstream tmpFile;
     tmpFile.rdbuf()->pubsetbuf(
         0, 0);  // Enable unbuffered io. Has to be called before open to be effective
-    tmpFile.open(getTmpOutput());
+    tmpFile.open(getTmpFile());
     tmpFile << SyntaxPrinter::printFile(*tree);
     return test(stats);
 }
@@ -128,9 +129,9 @@ void SvBugpoint::minimize() {
         SourceManager sourceManager;
         BumpAllocator alloc;
         std::vector<slang::parsing::Trivia> newTrivia;
-        for (size_t i = 0; i < paths.size(); i++) {
+        for (size_t i = 0; i < minimizedFiles.size(); i++) {
             currentPathIdx = i;
-            auto treeOrErr = SyntaxTree::fromFile(std::string(getOutput()), sourceManager);
+            auto treeOrErr = SyntaxTree::fromFile(std::string(getMinimizedFile()), sourceManager);
 
             if (treeOrErr) {
                 auto tree = *treeOrErr;
@@ -164,7 +165,7 @@ void SvBugpoint::minimize() {
                 } while (committed);
 
             } else {
-                PRINTF_ERR("failed to load '%s' file: %s\n", getInput().c_str(),
+                PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
                            std::string(treeOrErr.error().second).c_str());
                 exit(1);
             }
@@ -174,10 +175,10 @@ void SvBugpoint::minimize() {
 
 void SvBugpoint::removeVerilatorConfig() {
     auto info = AttemptStats("-", "verilatorConfigRemover", this);
-    for (size_t i = 0; i < paths.size(); i++) {
+    for (size_t i = 0; i < minimizedFiles.size(); i++) {
         currentPathIdx = i;
-        std::ifstream inputFile(getOutput());
-        std::ofstream testFile(getTmpOutput());
+        std::ifstream inputFile(getMinimizedFile());
+        std::ofstream testFile(getTmpFile());
         std::string line;
         bool doSkip = false;
         bool skippedSomething = false;
@@ -201,49 +202,84 @@ void SvBugpoint::removeVerilatorConfig() {
     }
 }
 
+fs::path findCommonAncestor(fs::path a, fs::path b) {
+    fs::path common;
+    auto it_a = a.begin();
+    auto it_b = b.begin();
+    while (it_a != a.end() && it_b != b.end() && *it_a == *it_b) {
+        common /= *it_a;
+        it_a++;
+        it_b++;
+    }
+    return common;
+}
+
+fs::path findCommonAncestor(std::vector<fs::path> paths) {
+    fs::path commonAncestor = fs::canonical(paths[0]).parent_path();
+    for (auto& path : paths) {
+        commonAncestor = findCommonAncestor(commonAncestor, fs::canonical(path));
+    }
+    return commonAncestor;
+}
+
 void SvBugpoint::initOutDir() {
-    mkdir(getOutDir());
-    if (!std::filesystem::is_empty(getOutDir()) && !force.value_or(false)) {
-        std::cerr << getOutDir() << " is not empty directory. Continue? [Y/n] ";
+    // sort paths to have deterministic order
+    std::sort(inputFiles.begin(), inputFiles.end());
+
+    // recreate file structure in output directories
+    fs::path commonAncestor = findCommonAncestor(inputFiles);
+    for (auto& input : inputFiles) {
+        fs::path relative = fs::relative(input, commonAncestor);
+        minimizedFiles.push_back(getOutDir() / relative);
+        tmpFiles.push_back(getTmpOutDir() / relative);
+    }
+
+    mkdir(getWorkDir());
+    if (!std::filesystem::is_empty(getWorkDir()) && !force.value_or(false)) {
+        std::cerr << getWorkDir() << " is not empty directory. Continue? [Y/n] ";
         int ch = std::cin.get();
         if (ch != '\n' && ch != 'Y' && ch != 'y') {
             exit(0);
         }
     }
-    mkdir(getTmpDir());
-    if (saveIntermediates.value_or(false))
+    mkdir(getOutDir());
+    mkdir(getTmpOutDir());
+    mkdir(getDebugDir());
+    mkdir(getTraceDir());
+    if (saveIntermediates.value_or(false)) {
         mkdir(getIntermediateDir());
-    // sort paths to have deterministic order
-    std::sort(paths.begin(), paths.end());
+    }
     // NOTE: not removing old files may be misleading (especially having an intermediate dir)
     // Maybe add some kind of purge?
-    for (size_t i = 0; i < paths.size(); i++) {
+    for (size_t i = 0; i < inputFiles.size(); i++) {
         currentPathIdx = i;
-        copyFile(getInput(), getOutput());
-        copyFile(getInput(), getTmpOutput());
-        AttemptStats::writeHeader(getTrace());
+        mkdir(getMinimizedFile().parent_path());
+        mkdir(getTmpFile().parent_path());
+        copyFile(getOriginalFile(), getMinimizedFile());
+        copyFile(getOriginalFile(), getTmpFile());
+        AttemptStats::writeHeader(getTraceFile());
     }
-    saveMinimalizedFile();
+    saveCombinedOutput();
 }
 
 void SvBugpoint::dryRun() {
     auto info = AttemptStats("-", "dryRun", this);
     if (!test(info)) {
         PRINTF_ERR("'%s %s' exited with non-zero on dry run with unmodified input\n",
-                   getCheckScript().c_str(), getTmpOutput().c_str());
+                   getCheckScript().c_str(), getTmpFile().c_str());
         exit(1);
     }
 }
 
 void SvBugpoint::checkDumpTrees() {
     if (dump.value_or(false)) {
-        for (size_t i = 0; i < paths.size(); i++) {
+        for (size_t i = 0; i < inputFiles.size(); i++) {
             currentPathIdx = i;
-            auto treeOrErr = SyntaxTree::fromFile(std::string(getInput()));
+            auto treeOrErr = SyntaxTree::fromFile(std::string(getOriginalFile()));
             if (treeOrErr) {
                 auto tree = *treeOrErr;
 
-                std::ofstream syntaxDumpFile(getDumpSyntax()), astDumpFile(getDumpAst());
+                std::ofstream syntaxDumpFile(getDumpSyntaxFile()), astDumpFile(getDumpAstFile());
                 printSyntaxTree(tree, syntaxDumpFile);
 
                 Compilation compilation;
@@ -252,7 +288,7 @@ void SvBugpoint::checkDumpTrees() {
 
                 printAst(compilation.getRoot(), astDumpFile);
             } else {
-                PRINTF_ERR("failed to load '%s' file: %s\n", getInput().c_str(),
+                PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
                            std::string(treeOrErr.error().second).c_str());
                 exit(1);
             }
@@ -260,15 +296,15 @@ void SvBugpoint::checkDumpTrees() {
     }
 }
 
-void SvBugpoint::saveMinimalizedFile() {
-    std::ofstream output{getMinimalizedOutput()};
-    for (size_t i = 0; i < paths.size(); i++) {
+void SvBugpoint::saveCombinedOutput() {
+    std::ofstream combinedOutput{getCombinedOutputFile()};
+    for (size_t i = 0; i < minimizedFiles.size(); i++) {
         currentPathIdx = i;
-        auto minimalizedOutputPath = getOutput();
+        auto minimalizedOutputPath = getMinimizedFile();
         // Don't append empty files
         if (!is_empty(minimalizedOutputPath) && file_size(minimalizedOutputPath) > 1) {
-            std::ifstream input{getOutput()};
-            output << input.rdbuf();
+            std::ifstream input{getMinimizedFile()};
+            combinedOutput << input.rdbuf();
         }
     }
 }
@@ -301,8 +337,8 @@ void SvBugpoint::addArgs() {
 
     cmdLine.setPositional(
         [this](std::string_view value) {
-            if (outDir.empty()) {
-                outDir = value;
+            if (workDir.empty()) {
+                workDir = value;
             } else if (checkScript.empty()) {
                 checkScript = value;
             } else {
@@ -372,7 +408,7 @@ void SvBugpoint::parseArgs(int argc, char** argv) {
         usage();
         exit(0);
     }
-    if (paths.empty() || outDir.empty() || checkScript.empty()) {
+    if (inputFiles.empty() || workDir.empty() || checkScript.empty()) {
         usage();
         exit(1);
     }
@@ -397,5 +433,5 @@ int main(int argc, char** argv) {
 
     svBugpoint.minimize();
 
-    svBugpoint.saveMinimalizedFile();
+    svBugpoint.saveCombinedOutput();
 }

@@ -160,17 +160,17 @@ int countLines(const std::string& filename) {
 }
 
 AttemptStats& AttemptStats::begin() {
-    linesBefore = countLines(svBugpoint->getOutput());
+    linesBefore = countLines(svBugpoint->getMinimizedFile());
     startTime = std::chrono::high_resolution_clock::now();
     idx = svBugpoint->getCurrentAttemptIdx();
     return *this;
 }
 AttemptStats& AttemptStats::end(bool committed) {
     this->committed = committed;
-    linesAfter = countLines(svBugpoint->getTmpOutput());
+    linesAfter = countLines(svBugpoint->getTmpFile());
     endTime = std::chrono::high_resolution_clock::now();
     if (svBugpoint->getSaveIntermediates()) {
-        copyFile(svBugpoint->getTmpOutput(), svBugpoint->getAttemptOutput());
+        copyFile(svBugpoint->getTmpFile(), svBugpoint->getAttemptOutput());
     }
     svBugpoint->updateCurrentAttemptIdx();
     return *this;
@@ -182,13 +182,13 @@ std::string AttemptStats::toStr() const {
     auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration << "ms\t"
-        << idx << '\t' << typeInfo << '\t' << svBugpoint->getInput() << "\n";
+        << idx << '\t' << typeInfo << '\t' << svBugpoint->getOriginalFile() << "\n";
     return tmp.str();
 }
 
 void AttemptStats::report() {
     std::cerr << toStr();
-    std::ofstream file(svBugpoint->getTrace(), std::ios_base::app);
+    std::ofstream file(svBugpoint->getTraceFile(), std::ios_base::app);
     file << toStr() << std::flush;
 }
 

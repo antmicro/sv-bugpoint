@@ -19,7 +19,7 @@ class SvBugpoint {
     void addFilesFromDirectory(fs::path dir);
     void parseArgs(int argc, char** argv);
 
-    void addPath(std::string_view path) { paths.emplace_back(path); }
+    void addPath(std::string_view path) { inputFiles.emplace_back(path); }
     bool getSaveIntermediates() { return saveIntermediates.value_or(false); }
     int getCurrentAttemptIdx() { return currentAttemptIdx; }
     void updateCurrentAttemptIdx() { currentAttemptIdx++; }
@@ -35,64 +35,55 @@ class SvBugpoint {
     bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats);
     void checkDumpTrees();
 
-    fs::path getOutDir() { return outDir; }
-    fs::path getTmpDir() { return outDir / kTmpDir; }
-    fs::path getInputStem() { return getInput().stem(); }
-    fs::path getInputExtension() { return getInput().extension(); }
-    fs::path getIntermediateDir() { return getOutDir() / kIntermediatesDir; }
-    fs::path getInput() { return paths[currentPathIdx]; }
-    fs::path getOutput() { return getOutputFileName(kSvBugpointPrefix, ""); }
-    fs::path getTmpOutput() {
-        fs::path result = getTmpDir() / getInputStem();
-        result += getInputExtension();
-        return result;
-    }
-    fs::path getTrace() { return getOutputFileName(kTracePrefix, ""); }
-    fs::path getDumpSyntax() { return getOutputFileName(kSvBugpointPrefix, kDumpSyntaxSuffix); }
-    fs::path getDumpAst() { return getOutputFileName(kSvBugpointPrefix, kDumpAstSuffix); }
-    fs::path getMinimalizedOutput() { return getOutDir() / kSvBugpointMinimalized; }
+    fs::path getWorkDir() { return workDir; }
+    fs::path getOutDir() { return workDir / "minimized"; }
+    fs::path getTmpOutDir() { return workDir / "tmp"; }
+    fs::path getDebugDir() { return workDir / "debug"; }
+    fs::path getTraceDir() { return workDir / "debug" / "trace"; }
+    fs::path getIntermediateDir() { return getDebugDir() / "attempts"; }
+
+    fs::path getOriginalFile() { return inputFiles[currentPathIdx]; }
+    fs::path getMinimizedFile() { return minimizedFiles[currentPathIdx]; }
+    fs::path getTmpFile() { return tmpFiles[currentPathIdx]; }
+
+    std::string getExtension() { return getOriginalFile().extension(); }
+    std::string getStem() { return getOriginalFile().stem(); }
+    std::string getBasename() { return getOriginalFile().filename(); }
+
+    fs::path getTraceFile() { return getDebugDir() / "trace" / (getBasename() + ".trace"); }
+    fs::path getDumpSyntaxFile() { return getDebugDir() / "syntax-dump"; }
+    fs::path getDumpAstFile() { return getDebugDir() / "ast-dump"; }
+    fs::path getCombinedOutputFile() { return workDir / "sv-bugpoint-combined.sv"; }
     fs::path getAttemptOutput() {
-        fs::path result = getIntermediateDir() / "attempt";
-        result += std::to_string(currentAttemptIdx);
-        result += getInputExtension();
-        return result;
+        std::string name =
+            getStem() + ".attempt" + std::to_string(currentAttemptIdx) + getExtension();
+        return getIntermediateDir() / name;
     }
+
     fs::path getCheckScript() { return checkScript; }
     std::vector<std::string> getTestArgs() {
         std::vector<std::string> result;
         auto oldCurrentPathIdx = currentPathIdx;
-        for (size_t i = 0; i < paths.size(); i++) {
+        for (size_t i = 0; i < minimizedFiles.size(); i++) {
             currentPathIdx = i;
             if ((int)i != oldCurrentPathIdx) {
-                result.push_back(getOutput());
+                result.push_back(getMinimizedFile());
             }
         }
         currentPathIdx = oldCurrentPathIdx;
-        result.push_back(getTmpOutput());
+        result.push_back(getTmpFile());
         return result;
     }
 
-    void saveMinimalizedFile();
+    void saveCombinedOutput();
 
    private:
-    const fs::path kTmpDir{"tmp"};
-    const fs::path kIntermediatesDir{"intermediates"};
-    const fs::path kSvBugpointPrefix{"sv-bugpoint-"};
-    const fs::path kTracePrefix{"sv-bugpoint-trace"};
-    const fs::path kDumpSyntaxSuffix{"dump-syntax"};
-    const fs::path kDumpAstSuffix{"dump-ast"};
-    const fs::path kSvBugpointMinimalized{"sv-bugpoint-minimized.sv"};
-
-    fs::path getOutputFileName(const fs::path& prefix, const fs::path& suffix) {
-        fs::path result = getOutDir() / prefix;
-        result += getInputStem();
-        result += suffix;
-        result += getInputExtension();
-        return result;
-    };
     CommandLine cmdLine;
 
-    std::vector<fs::path> paths;
+    std::vector<fs::path> inputFiles;
+    std::vector<fs::path> minimizedFiles;
+    std::vector<fs::path> tmpFiles;
+
     int currentPathIdx;
     // Global counter incremented after end of each attempt
     // Meant mainly for setting up conditional breakpoints based on trace
@@ -103,6 +94,6 @@ class SvBugpoint {
     // Flag for saving intermediate output of each attempt
     std::optional<bool> saveIntermediates;
     std::optional<bool> showHelp;
-    std::string outDir;
+    fs::path workDir;
     flat_hash_set<fs::path> activeCommandFiles;
 };

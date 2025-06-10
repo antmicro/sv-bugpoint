@@ -4,9 +4,9 @@
 # usage: run_test test_name checkscript.sh input.sv
 printf "TEST: %s\n" "$1"
 
-actual_file=out/"$1"/sv-bugpoint-minimized.sv
+actual_file=out/"$1"/sv-bugpoint-combined.sv
 [ -e "$actual_file" ] && rm "$actual_file" # to not get fake PASS if bugpoint did not overwrite old result
-golden_file=golden/"$1"/sv-bugpoint-minimized.sv
+golden_file=golden/"$1"/sv-bugpoint-combined.sv
 
 OUT_DIR=out/"$1"
 shift
