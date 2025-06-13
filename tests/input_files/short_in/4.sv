@@ -16,14 +16,14 @@ module serial_adder #(WIDTH=32) (
     wire [WIDTH:0] k;
     wire [WIDTH:0] l;
     wire [WIDTH:0] c;
-    wire [WIDTH:0] m;
+    wire [32:0] m = k + l + c + a + b;
     wire [WIDTH:0] n = 4;
 
     generate for (genvar i = 0; i < WIDTH; i++)
         full_adder fa(a[i], b[i], c[i], s[i], c[i+1]);
     endgenerate
 
-    struct_foo foo = '{5,6};
+    struct_foo foo = '{5,m};
     assign foo.a = 25;
     assign foo.c = 0;
     

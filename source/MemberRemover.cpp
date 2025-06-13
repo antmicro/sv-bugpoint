@@ -10,7 +10,7 @@ class MemberRemover : public OneTimeRewriter<MemberRemover> {
 
     ShouldVisitChildren handle(const NetDeclarationSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);
-        return DONT_VISIT_CHILDREN;
+        return VISIT_CHILDREN;
     }
 
     ShouldVisitChildren handle(const StructUnionMemberSyntax& node, bool isNodeRemovable) {
@@ -20,6 +20,11 @@ class MemberRemover : public OneTimeRewriter<MemberRemover> {
 
     ShouldVisitChildren handle(const DeclaratorSyntax& node,
                                bool isNodeRemovable) {  // a.o. enum fields
+        removeNode(node, isNodeRemovable);
+        return VISIT_CHILDREN;
+    }
+
+    ShouldVisitChildren handle(const EqualsValueClauseSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);
         return DONT_VISIT_CHILDREN;
     }
