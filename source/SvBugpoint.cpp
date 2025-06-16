@@ -106,7 +106,6 @@ bool SvBugpoint::pass(std::shared_ptr<SyntaxTree>& tree, const std::string& pass
     commited |= rewriteLoop(makeExternRemover(tree), tree, "externRemover", passIdx, this);
     commited |= rewriteLoop<DeclRemover>(tree, "declRemover", passIdx, this);
     commited |= rewriteLoop<StatementsRemover>(tree, "statementsRemover", passIdx, this);
-    commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
     commited |= rewriteLoop<ImportsRemover>(tree, "importsRemover", passIdx, this);
     commited |= rewriteLoop<ParamAssignRemover>(tree, "paramAssignRemover", passIdx, this);
     commited |= rewriteLoop<ContAssignRemover>(tree, "contAssignRemover", passIdx, this);
@@ -115,6 +114,7 @@ bool SvBugpoint::pass(std::shared_ptr<SyntaxTree>& tree, const std::string& pass
     commited |= rewriteLoop(makePortsRemover(tree), tree, "portsRemover", passIdx, this);
     commited |= rewriteLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx, this);
     commited |= rewriteLoop<ModuleRemover>(tree, "moduleRemover", passIdx, this);
+    commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
 
     return commited;
 }
