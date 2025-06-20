@@ -135,6 +135,9 @@ std::string toString(SourceRange sourceRange) {
 }
 
 void copyFile(const std::string& from, const std::string& to) {
+    if (from == to) {
+        return;
+    }
     try {
         std::filesystem::copy(from, to, std::filesystem::copy_options::overwrite_existing);
     } catch (const std::filesystem::filesystem_error& err) {
@@ -146,7 +149,7 @@ void copyFile(const std::string& from, const std::string& to) {
 
 void mkdir(const std::string& path) {
     try {
-        std::filesystem::create_directory(path);
+        std::filesystem::create_directories(path);
     } catch (const std::filesystem::filesystem_error& err) {
         PRINTF_ERR("failed to make directory '%s': %s\n", path.c_str(),
                    err.code().message().c_str());

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+usage() {
+  printf "Usage: %s outDir/ checkscript.sh [sv-bugpoint-options]\n" "$(basename "$0")"
+  printf "Script for resuming partially done minimization\n"
+  exit 1
+}
+
+[ "$#" -lt 2 ] && usage
+
+IFS=$'\n' # Reduce chance of bad word splitting (space in filename)
+outdir="$1"
+checkscript="$2"
+shift 2;
+# shellcheck disable=SC2046 # The word-splitting of find's output is intentional
+sv-bugpoint "$outdir"/ "$checkscript" $(find "$outdir/minimized/" -type f) "$@" --force
