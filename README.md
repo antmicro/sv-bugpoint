@@ -12,8 +12,6 @@ It uses [Slang](https://github.com/MikePopoloski/slang) for parsing SystemVerilo
 Each removal attempt is tested with a user-supplied script to check whether it didn't change the property of interest (e.g. hide the bug, or cause a different error message).
 Minimization is performed iteratively until no further changes can be applied.
 
-`sv-bugpoint` currently only works on single-file inputs (e.g. source that's already been preprocessed).
-
 ## Building
 
 Run:
