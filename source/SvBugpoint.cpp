@@ -76,6 +76,7 @@ bool SvBugpoint::test(AttemptStats& stats) {
             std::error_code ec;
             std::filesystem::copy(getTmpFile(), getMinimizedFile(),
                                   std::filesystem::copy_options::overwrite_existing, ec);
+            saveCombinedOutput();
             if (ec) {
                 std::cerr << "Error copying file: " << ec.message() << std::endl;
                 exit(1);
@@ -298,6 +299,7 @@ void SvBugpoint::checkDumpTrees() {
 
 void SvBugpoint::saveCombinedOutput() {
     std::ofstream combinedOutput{getCombinedOutputFile()};
+    int oldPathIdx = currentPathIdx;
     for (size_t i = 0; i < minimizedFiles.size(); i++) {
         currentPathIdx = i;
         auto minimalizedOutputPath = getMinimizedFile();
@@ -307,6 +309,7 @@ void SvBugpoint::saveCombinedOutput() {
             combinedOutput << input.rdbuf();
         }
     }
+    currentPathIdx = oldPathIdx;
 }
 
 void SvBugpoint::usage() {
