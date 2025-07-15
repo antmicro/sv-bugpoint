@@ -170,7 +170,7 @@ AttemptStats& AttemptStats::begin() {
 }
 AttemptStats& AttemptStats::end(bool committed) {
     this->committed = committed;
-    linesAfter = countLines(svBugpoint->getTmpFile());
+    linesAfter = countLines(svBugpoint->getMinimizedFile());
     endTime = std::chrono::high_resolution_clock::now();
     if (svBugpoint->getSaveIntermediates()) {
         copyFile(svBugpoint->getTmpFile(), svBugpoint->getAttemptOutput());

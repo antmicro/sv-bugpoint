@@ -72,10 +72,10 @@ bool SvBugpoint::test(AttemptStats& stats) {
             stats.end(false).report();
             return false;
         } else {
-            stats.end(true).report();
             std::error_code ec;
             std::filesystem::copy(getTmpFile(), getMinimizedFile(),
                                   std::filesystem::copy_options::overwrite_existing, ec);
+            stats.end(true).report();
             saveCombinedOutput();
             if (ec) {
                 std::cerr << "Error copying file: " << ec.message() << std::endl;
