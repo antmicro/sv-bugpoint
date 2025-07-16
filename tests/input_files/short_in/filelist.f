@@ -1,4 +1,4 @@
-1.sv
-2.sv
-3.sv
-4.sv
+a.sv
+subdir/a.sv
+c.sv
+d.sv

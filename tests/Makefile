@@ -24,13 +24,13 @@ test_short_verilator_errmsg:
 test_short_multi_file_verilator_errmsg:
 	@verilator --version >/dev/null || (printf "FAILED: verilator not found\n"; exit 1)
 	@verilator --version | grep -q "5.016" || printf "NOTE: verilator version != 5.016. This may cause following test to fail\n"
-	@./run_test short_multifile_verilator_errmsg checkverilator_errmsg_short.sh ${INPUT_DIR}/short_in/1.sv ${INPUT_DIR}/short_in/2.sv ${INPUT_DIR}/short_in/3.sv ${INPUT_DIR}/short_in/4.sv
+	@./run_test short_multifile_verilator_errmsg checkverilator_errmsg_short.sh ${INPUT_DIR}/short_in/a.sv ${INPUT_DIR}/short_in/subdir/a.sv ${INPUT_DIR}/short_in/c.sv ${INPUT_DIR}/short_in/d.sv
 
 .PHONY: test_short_multi_file_flag_y_verilator_errmsg
 test_short_multi_file_flag_y_verilator_errmsg:
 	@verilator --version >/dev/null || (printf "FAILED: verilator not found\n"; exit 1)
 	@verilator --version | grep -q "5.016" || printf "NOTE: verilator version != 5.016. This may cause following test to fail\n"
-	@./run_test short_multifile_flag_y_verilator_errmsg checkverilator_errmsg_short.sh -y ${INPUT_DIR}/short_in
+	@./run_test short_multifile_flag_y_verilator_errmsg checkverilator_errmsg_short.sh -y ${INPUT_DIR}/short_in -y ${INPUT_DIR}/short_in/subdir
 
 .PHONY: test_short_multi_file_flag_f_verilator_errmsg
 test_short_multi_file_flag_f_verilator_errmsg:
