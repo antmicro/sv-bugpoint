@@ -98,80 +98,76 @@ bool SvBugpoint::test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats) {
     return test(stats);
 }
 
-bool SvBugpoint::pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx) {
-    bool commited = false;
+void removeComments(std::shared_ptr<SyntaxTree>& tree, BumpAllocator& alloc) {
+    // Comments are not separate SyntaxNodes, but trivia of SyntaxNodes
+    // Make sure that we remove all comments from the first SyntaxNode
+    // to match the behavior when we would remove first node.
+    slang::parsing::Token* firstToken = tree->root().getFirstTokenPtr();
+    SmallVector<slang::parsing::Trivia> newTrivia;
+    const auto& trivia = firstToken->trivia();
+    if (std::find_if(trivia.begin(), trivia.end(), [](const slang::parsing::Trivia& t) {
+            return t.kind == slang::parsing::TriviaKind::LineComment;
+        }) != trivia.end()) {
+        for (const auto& t : trivia) {
+            // Copy all trivia except line comments
+            if (t.kind != slang::parsing::TriviaKind::LineComment) {
+                newTrivia.push_back(t.clone(alloc));
+            } else {
+                // In case of comments, just create empty trivia so we would always have
+                // the same number of lines
+                newTrivia.push_back(
+                    slang::parsing::Trivia{slang::parsing::TriviaKind::LineComment, ""});
+            }
+        }
+        *firstToken = firstToken->withTrivia(alloc, newTrivia.copy(alloc));
+    }
+}
 
-    commited |= rewriteLoop<BodyRemover>(tree, "bodyRemover", passIdx, this);
-    commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx, this);
-    commited |= rewriteLoop<BindRemover>(tree, "bindRemover", passIdx, this);
-    commited |= rewriteLoop<BodyPartsRemover>(tree, "bodyPartsRemover", passIdx, this);
-    commited |= rewriteLoop(makeExternRemover(tree), tree, "externRemover", passIdx, this);
-    commited |= rewriteLoop<DeclRemover>(tree, "declRemover", passIdx, this);
-    commited |= rewriteLoop<StatementsRemover>(tree, "statementsRemover", passIdx, this);
-    commited |= rewriteLoop<ImportsRemover>(tree, "importsRemover", passIdx, this);
-    commited |= rewriteLoop<ParamAssignRemover>(tree, "paramAssignRemover", passIdx, this);
-    commited |= rewriteLoop<ContAssignRemover>(tree, "contAssignRemover", passIdx, this);
-    commited |= rewriteLoop<MemberRemover>(tree, "memberRemover", passIdx, this);
-    commited |= rewriteLoop<ModportRemover>(tree, "modportRemover", passIdx, this);
-    commited |= rewriteLoop(makePortsRemover(tree), tree, "portsRemover", passIdx, this);
-    commited |= rewriteLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx, this);
-    commited |= rewriteLoop<ModuleRemover>(tree, "moduleRemover", passIdx, this);
-    commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
+bool SvBugpoint::pass(const std::string& passIdx) {
+    bool commited = false;
+    SourceManager sourceManager;
+    BumpAllocator alloc;
+
+    for (size_t i = 0; i < minimizedFiles.size(); i++) {
+        currentPathIdx = i;
+
+        auto treeOrErr = SyntaxTree::fromFile(std::string(getMinimizedFile()), sourceManager);
+        if (!treeOrErr) {
+            PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
+                       std::string(treeOrErr.error().second).c_str());
+            exit(1);
+        }
+        auto tree = *treeOrErr;
+
+        removeComments(tree, alloc);
+        commited |= rewriteLoop<BodyRemover>(tree, "bodyRemover", passIdx, this);
+        commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx, this);
+        commited |= rewriteLoop<BindRemover>(tree, "bindRemover", passIdx, this);
+        commited |= rewriteLoop<BodyPartsRemover>(tree, "bodyPartsRemover", passIdx, this);
+        commited |= rewriteLoop(makeExternRemover(tree), tree, "externRemover", passIdx, this);
+        commited |= rewriteLoop<DeclRemover>(tree, "declRemover", passIdx, this);
+        commited |= rewriteLoop<StatementsRemover>(tree, "statementsRemover", passIdx, this);
+        commited |= rewriteLoop<ImportsRemover>(tree, "importsRemover", passIdx, this);
+        commited |= rewriteLoop<ParamAssignRemover>(tree, "paramAssignRemover", passIdx, this);
+        commited |= rewriteLoop<ContAssignRemover>(tree, "contAssignRemover", passIdx, this);
+        commited |= rewriteLoop<MemberRemover>(tree, "memberRemover", passIdx, this);
+        commited |= rewriteLoop<ModportRemover>(tree, "modportRemover", passIdx, this);
+        commited |= rewriteLoop(makePortsRemover(tree), tree, "portsRemover", passIdx, this);
+        commited |= rewriteLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx, this);
+        commited |= rewriteLoop<ModuleRemover>(tree, "moduleRemover", passIdx, this);
+        commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
+    }
 
     return commited;
 }
 
 void SvBugpoint::minimize() {
     removeVerilatorConfig();
-    bool anyChange = true;
-    while (anyChange) {
-        anyChange = false;
-        // Create a new SourceManager per each loop as it caches the file content
-        SourceManager sourceManager;
-        BumpAllocator alloc;
-        for (size_t i = 0; i < minimizedFiles.size(); i++) {
-            currentPathIdx = i;
-            auto treeOrErr = SyntaxTree::fromFile(std::string(getMinimizedFile()), sourceManager);
-
-            if (treeOrErr) {
-                auto tree = *treeOrErr;
-                // Comments are not separate SyntaxNodes, but trivia of SyntaxNodes
-                // Make sure that we remove all comments from the first SyntaxNode
-                // to match the behavior when we would remove first node.
-                slang::parsing::Token* firstToken = tree->root().getFirstTokenPtr();
-                std::vector<slang::parsing::Trivia> newTrivia;
-                const auto& trivia = firstToken->trivia();
-                if (std::find_if(trivia.begin(), trivia.end(), [](const slang::parsing::Trivia& t) {
-                        return t.kind == slang::parsing::TriviaKind::LineComment;
-                    }) != trivia.end()) {
-                    for (const auto& t : trivia) {
-                        // Copy all trivia except line comments
-                        if (t.kind != slang::parsing::TriviaKind::LineComment) {
-                            newTrivia.push_back(t.clone(alloc));
-                        } else {
-                            // In case of comments, just create empty trivia so we would always have
-                            // the same number of lines
-                            newTrivia.push_back(slang::parsing::Trivia{
-                                slang::parsing::TriviaKind::LineComment, ""});
-                        }
-                    }
-                    *firstToken = firstToken->withTrivia(alloc, newTrivia);
-                }
-
-                int passIdx = 1;
-                bool committed;
-                do {
-                    committed = pass(tree, std::to_string(passIdx++));
-                    anyChange |= committed;
-                } while (committed);
-
-            } else {
-                PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
-                           std::string(treeOrErr.error().second).c_str());
-                exit(1);
-            }
-        }
-    }
+    int passIdx = 1;
+    bool committed;
+    do {
+        committed = pass(std::to_string(passIdx++));
+    } while (committed);
 }
 
 void SvBugpoint::removeVerilatorConfig() {

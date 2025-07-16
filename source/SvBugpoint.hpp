@@ -29,7 +29,7 @@ class SvBugpoint {
     void initOutDir();
     void removeVerilatorConfig();
     void minimize();
-    bool pass(std::shared_ptr<SyntaxTree>& tree, const std::string& passIdx = "-");
+    bool pass(const std::string& passIdx = "-");
 
     bool test(AttemptStats& stats);
     bool test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats);
