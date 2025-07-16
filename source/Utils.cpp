@@ -185,7 +185,7 @@ std::string AttemptStats::toStr() const {
     auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     tmp << pass << '\t' << stage << '\t' << lines << '\t' << committed << '\t' << duration << "ms\t"
-        << idx << '\t' << typeInfo << '\t' << svBugpoint->getOriginalFile() << "\n";
+        << idx << '\t' << typeInfo << '\t' << svBugpoint->getShortPath() << "\n";
     return tmp.str();
 }
 

@@ -39,7 +39,6 @@ class SvBugpoint {
     fs::path getOutDir() { return workDir / "minimized"; }
     fs::path getTmpOutDir() { return workDir / "tmp"; }
     fs::path getDebugDir() { return workDir / "debug"; }
-    fs::path getTraceDir() { return workDir / "debug" / "trace"; }
     fs::path getIntermediateDir() { return getDebugDir() / "attempts"; }
 
     fs::path getOriginalFile() { return inputFiles[currentPathIdx]; }
@@ -49,8 +48,13 @@ class SvBugpoint {
     std::string getExtension() { return getOriginalFile().extension(); }
     std::string getStem() { return getOriginalFile().stem(); }
     std::string getBasename() { return getOriginalFile().filename(); }
+    std::string getShortPath() {
+        // common/work/dir/a.sv -> a.sv
+        // common/work/dir/subdir/b.sv -> subdir/b.sv
+        return fs::relative(getOriginalFile(), commonInputAncestor);
+    }
 
-    fs::path getTraceFile() { return getDebugDir() / "trace" / (getBasename() + ".trace"); }
+    fs::path getTraceFile() { return getDebugDir() / "trace"; }
     fs::path getDumpSyntaxFile() { return getDebugDir() / "syntax-dump"; }
     fs::path getDumpAstFile() { return getDebugDir() / "ast-dump"; }
     fs::path getCombinedOutputFile() { return workDir / "sv-bugpoint-combined.sv"; }
@@ -80,6 +84,7 @@ class SvBugpoint {
    private:
     CommandLine cmdLine;
 
+    fs::path commonInputAncestor;
     std::vector<fs::path> inputFiles;
     std::vector<fs::path> minimizedFiles;
     std::vector<fs::path> tmpFiles;

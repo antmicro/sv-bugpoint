@@ -172,6 +172,7 @@ void SvBugpoint::minimize() {
 
 void SvBugpoint::removeVerilatorConfig() {
     auto info = AttemptStats("-", "verilatorConfigRemover", this);
+    info.typeInfo = "-";
     for (size_t i = 0; i < minimizedFiles.size(); i++) {
         currentPathIdx = i;
         std::ifstream inputFile(getMinimizedFile());
@@ -224,9 +225,9 @@ void SvBugpoint::initOutDir() {
     std::sort(inputFiles.begin(), inputFiles.end());
 
     // recreate file structure in output directories
-    fs::path commonAncestor = findCommonAncestor(inputFiles);
+    commonInputAncestor = findCommonAncestor(inputFiles);
     for (auto& input : inputFiles) {
-        fs::path relative = fs::relative(input, commonAncestor);
+        fs::path relative = fs::relative(input, commonInputAncestor);
         minimizedFiles.push_back(getOutDir() / relative);
         tmpFiles.push_back(getTmpOutDir() / relative);
     }
@@ -242,7 +243,6 @@ void SvBugpoint::initOutDir() {
     mkdir(getOutDir());
     mkdir(getTmpOutDir());
     mkdir(getDebugDir());
-    mkdir(getTraceDir());
     if (saveIntermediates.value_or(false)) {
         mkdir(getIntermediateDir());
     }
@@ -254,13 +254,14 @@ void SvBugpoint::initOutDir() {
         mkdir(getTmpFile().parent_path());
         copyFile(getOriginalFile(), getMinimizedFile());
         copyFile(getOriginalFile(), getTmpFile());
-        AttemptStats::writeHeader(getTraceFile());
     }
+    AttemptStats::writeHeader(getTraceFile());
     saveCombinedOutput();
 }
 
 void SvBugpoint::dryRun() {
     auto info = AttemptStats("-", "dryRun", this);
+    info.typeInfo = "-";
     if (!test(info)) {
         PRINTF_ERR("'%s %s' exited with non-zero on dry run with unmodified input\n",
                    getCheckScript().c_str(), getTmpFile().c_str());

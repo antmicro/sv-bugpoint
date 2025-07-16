@@ -5,11 +5,11 @@
 awk '
 NR==1{
   FS=OFS="\t"
-  print "pass\tstage\tlines_removed\tcommits\trollbacks\tattempts\ttime";
+  print "pass\tstage\tlines_removed\tcommits\trollbacks\tattempts\ttime\tfile";
   next;
 }
-NR==2 { pass=$1; stage=$2; }
-$1!=pass || $2!=stage { handleStageEnd() }
+NR==2 { pass=$1; stage=$2; input_file=$8 }
+$1!=pass || $2!=stage || $8!=input_file { handleStageEnd() }
 $1!=pass { handlePassEnd() }
 { handleAttempt() }
 END { handleStageEnd(); handlePassEnd(); printRecord("*","*",totalStats); }
@@ -21,7 +21,7 @@ function mergeStats(lhs, rhs,     i) {
 }
 function printRecord(pass, stage, stats) {
    secs = sprintf("%.1f", stats["millisecs"]/1000)"s"
-   print pass, stage, stats["lines"], stats["commits"], stats["attempts"]-stats["commits"], stats["attempts"], secs;
+   print pass, stage, stats["lines"], stats["commits"], stats["attempts"]-stats["commits"], stats["attempts"], secs, input_file;
 }
 function handleAttempt() {
    tmp["lines"]=$3; tmp["commits"]=$4; tmp["attempts"]=1; tmp["millisecs"]=gensub("/ms/", "", "g", $5);
@@ -31,6 +31,7 @@ function handleStageEnd() {
    printRecord(pass, stage, stageStats)
    mergeStats(passStats, stageStats);
    stage=$2;
+   input_file=$8
 }
 function handlePassEnd() {
    printRecord(pass, "*", passStats);
