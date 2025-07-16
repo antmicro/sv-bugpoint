@@ -129,7 +129,6 @@ void SvBugpoint::minimize() {
         // Create a new SourceManager per each loop as it caches the file content
         SourceManager sourceManager;
         BumpAllocator alloc;
-        std::vector<slang::parsing::Trivia> newTrivia;
         for (size_t i = 0; i < minimizedFiles.size(); i++) {
             currentPathIdx = i;
             auto treeOrErr = SyntaxTree::fromFile(std::string(getMinimizedFile()), sourceManager);
@@ -140,6 +139,7 @@ void SvBugpoint::minimize() {
                 // Make sure that we remove all comments from the first SyntaxNode
                 // to match the behavior when we would remove first node.
                 slang::parsing::Token* firstToken = tree->root().getFirstTokenPtr();
+                std::vector<slang::parsing::Trivia> newTrivia;
                 const auto& trivia = firstToken->trivia();
                 if (std::find_if(trivia.begin(), trivia.end(), [](const slang::parsing::Trivia& t) {
                         return t.kind == slang::parsing::TriviaKind::LineComment;

@@ -3,14 +3,6 @@
 
 
 
-
-
-
-
-
-
-
-
 typedef struct {
         int b;
 } struct_foo;
