@@ -3,4 +3,4 @@
 
 # strip volatile metadata like paths, filelines and redundant whitespace
 # from verilator errmsg so it can be reliably compared
-sed 's/[./a-z0-9_-]*.sv//g' | sed 's/:[0-9]*//g' | sed 's/[0-9]* |//g' | sed 's/[\t\n ]\+/ /g'
+sed 's/[./a-zA-Z0-9_-]*.sv//g' | sed 's/:[0-9]*//g' | sed 's/[0-9]* |//g' | sed 's/[\t\n ]\+/ /g'
