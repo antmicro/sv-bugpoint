@@ -1,7 +1,14 @@
 #!/bin/sh
 # SPDX-License-Identifier: Apache-2.0
 
-# create concise minimization summary from sv-bugpoint-trace provided on stdin
+# create concise minimization summary from sv-bugpoint-trace provided on stdin/first argument
+# examples:
+# $ sv-bugpoint-trace-summary <out/debug/trace
+# $ sv-bugpoint-trace-summary out/debug/trace
+# $ watch sv-bugpoint-trace-summary out/debug/trace
+
+[ $# -eq 1 ] && input="$1" || input="-"
+
 awk '
 NR==1{
   FS=OFS="\t"
@@ -38,4 +45,4 @@ function handlePassEnd() {
    mergeStats(totalStats, passStats);
    pass=$1;
 }
-' | column -t
+' "$input" | column -t
