@@ -51,7 +51,7 @@ sv-bugpoint <OUT_DIR> <CHECK_SCRIPT> <INPUT_SV> [<INPUT_SV>]
 The output directory will be populated with:
 - `minimized/<INPUT_SV>` - minimized code for each input file. They are updated after each successful pass,
 - `tmp/<INPUT_SV>` - a copy of the previous file with a removal attempt applied, to be checked with the provided script,
-- `sv-bugpoint-combined.sv` - if sv-bugpoint is launched with multiple input files, this file contains concatenation of all files in `minimized/` directory.
+- `sv-bugpoint-combined.sv` - if sv-bugpoint is launched with multiple input files, this file contains the concatenation of all files in `minimized/` directory.
 It should be treated more as live preview of how minimization is going rather than as source of truth - it is very likely that concatenation will make no sense. If sv-bugpoint is executed on single input file, it is simply a copy of `minimized/<INPUT_SV>`.
 - `debug/trace` - verbose, tab-delimited trace with stats and additional info about each removal attempt ([example](examples/caliptra_verilation_err/out/debug/trace)).
   It can be turned into a concise, high-level summary with the [`sv-bugpoint-trace_summary script`](scripts/sv-bugpoint-trace_summary) ([example](examples/caliptra_verilation_err/sv-bugpoint-trace_summarized)).
