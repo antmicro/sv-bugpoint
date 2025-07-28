@@ -1,6 +1,6 @@
 # sv-bugpoint
 
-Copyright (c) 2024 [Antmicro](https://www.antmicro.com)
+Copyright (c) 2024-2025 [Antmicro](https://www.antmicro.com)
 
 ![sv-bugpoint-logo-github-readme](https://github.com/user-attachments/assets/94caef96-85d6-4e50-8b39-ff9d0f5fe7e7)
 
