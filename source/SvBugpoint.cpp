@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "SvBugpoint.hpp"
+#include <fcntl.h>
 #include <slang/syntax/SyntaxTree.h>
 #include <slang/text/SourceManager.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <filesystem>
 #include <iostream>
@@ -98,29 +101,97 @@ bool SvBugpoint::test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats) {
     return test(stats);
 }
 
-void removeComments(std::shared_ptr<SyntaxTree>& tree, BumpAllocator& alloc) {
-    // Comments are not separate SyntaxNodes, but trivia of SyntaxNodes
-    // Make sure that we remove all comments from the first SyntaxNode
-    // to match the behavior when we would remove first node.
-    slang::parsing::Token* firstToken = tree->root().getFirstTokenPtr();
-    SmallVector<slang::parsing::Trivia> newTrivia;
-    const auto& trivia = firstToken->trivia();
-    if (std::find_if(trivia.begin(), trivia.end(), [](const slang::parsing::Trivia& t) {
-            return t.kind == slang::parsing::TriviaKind::LineComment;
-        }) != trivia.end()) {
-        for (const auto& t : trivia) {
-            // Copy all trivia except line comments
-            if (t.kind != slang::parsing::TriviaKind::LineComment) {
-                newTrivia.push_back(t.clone(alloc));
-            } else {
-                // In case of comments, just create empty trivia so we would always have
-                // the same number of lines
-                newTrivia.push_back(
-                    slang::parsing::Trivia{slang::parsing::TriviaKind::LineComment, ""});
-            }
-        }
-        *firstToken = firstToken->withTrivia(alloc, newTrivia.copy(alloc));
+char* getNextDelim(char* line, char* end) {
+    if (line > end)
+        return nullptr;
+    while (line < end) {
+        if (*line == '\n')
+            return line;
+        if (*line == '\r')
+            return line;
+        if (*line == '\0')
+            return line;
+        line++;
     }
+    return end;
+}
+
+bool lineRemover(const std::string& stageName, const std::string& passIdx, SvBugpoint* svBugpoint) {
+    // Remove preprocessor directives and line comments line-by-line
+
+    int fd = open(svBugpoint->getTmpFile().c_str(), O_RDWR);
+    if (fd < 0) {
+        perror("open");
+        return false;
+    }
+
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        perror("fstat");
+        close(fd);
+        return false;
+    }
+
+    size_t fileSize = st.st_size;
+    if (fileSize == 0) {
+        close(fd);
+        return true;
+    }
+
+    char* data =
+        static_cast<char*>(mmap(nullptr, fileSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+    if (data == MAP_FAILED) {
+        perror("mmap");
+        close(fd);
+        return false;
+    }
+
+    bool committed = false;
+    char* nextDelim = nullptr;
+    char* line = data;
+    std::string removedLine;
+    while ((nextDelim = getNextDelim(line, data + fileSize))) {
+        char* nextLine = nextDelim + 1;
+        char* firstPrintable = line;
+        while (*firstPrintable == ' ' || *firstPrintable == '\t') {
+            firstPrintable++;
+        }
+        if (!((*firstPrintable == '`') ||
+              (*firstPrintable == '/' && *(firstPrintable + 1) == '/'))) {
+            line = nextLine;
+            continue;
+        }
+        size_t skipLen = nextLine - line;
+        size_t remainingLen = fileSize - (nextLine - data);
+        removedLine.assign(line, skipLen);  // backup to be able to revert
+        memmove(line, nextLine, remainingLen);
+
+        if (ftruncate(fd, fileSize - skipLen) < 0) {
+            perror("ftruncate");
+            munmap(data, fileSize);
+            close(fd);
+            exit(-1);  // must exit, the file is in an inconsistent state
+        }
+        auto stats = AttemptStats(passIdx, stageName, svBugpoint);
+        if (svBugpoint->test(stats)) {
+            fileSize -= skipLen;
+            committed = true;
+        } else {
+            // go one line back, write the missing line, go where we were
+            if (ftruncate(fd, fileSize) < 0) {
+                perror("ftruncate (restore)");
+                munmap(data, fileSize);
+                close(fd);
+                exit(-1);
+            }
+            memmove(line + skipLen, line, remainingLen);
+            memcpy(line, removedLine.data(), skipLen);
+            line = nextLine;
+        }
+    }
+    munmap(data, fileSize);
+    close(fd);
+    return committed;
 }
 
 bool SvBugpoint::pass(const std::string& passIdx) {
@@ -131,6 +202,8 @@ bool SvBugpoint::pass(const std::string& passIdx) {
     for (size_t i = 0; i < minimizedFiles.size(); i++) {
         currentPathIdx = i;
 
+        commited |= lineRemover("lineRemover", passIdx, this);
+
         auto treeOrErr = SyntaxTree::fromFile(std::string(getMinimizedFile()), sourceManager);
         if (!treeOrErr) {
             PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
@@ -139,7 +212,6 @@ bool SvBugpoint::pass(const std::string& passIdx) {
         }
         auto tree = *treeOrErr;
 
-        removeComments(tree, alloc);
         commited |= rewriteLoop<BodyRemover>(tree, "bodyRemover", passIdx, this);
         commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx, this);
         commited |= rewriteLoop<BindRemover>(tree, "bindRemover", passIdx, this);

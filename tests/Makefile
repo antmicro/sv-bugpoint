@@ -5,7 +5,7 @@ test_dont_abort_after_err:
 	@$(MAKE) -k test
 
 .PHONY: test
-test: test_short test_caliptra
+test: test_short test_caliptra test_comment_dir
 
 .PHONY: test_short
 test_short: test_short_exit0 test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg
@@ -45,6 +45,10 @@ test_short_exit1:
 .PHONY: test_short_grep
 test_short_grep:
 	@./run_test short_grep checkgrep.sh ${INPUT_DIR}/short_in.sv
+
+.PHONY: test_comment_dir
+test_comment_dir:
+	@./run_test comment_dir checkverilator_run.sh ${INPUT_DIR}/comment_dir_in.sv
 
 .PHONY: test_caliptra
 test_caliptra: test_caliptra_exit0 test_caliptra_grep

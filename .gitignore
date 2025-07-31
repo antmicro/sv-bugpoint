@@ -1,3 +1,4 @@
 build/
-
+tests/obj_dir
+tests/out
 compile_commands.json
