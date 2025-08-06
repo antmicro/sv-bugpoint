@@ -102,15 +102,13 @@ bool SvBugpoint::test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats) {
 }
 
 char* getNextDelim(char* line, char* end) {
-    if (line > end)
+    if (line > end) {
         return nullptr;
+    }
     while (line < end) {
-        if (*line == '\n')
+        if (*line == '\n' || *line == '\r' || *line == '\0') {
             return line;
-        if (*line == '\r')
-            return line;
-        if (*line == '\0')
-            return line;
+        }
         line++;
     }
     return end;
@@ -460,16 +458,18 @@ void SvBugpoint::processCommandFiles(fs::path file) {
 void SvBugpoint::parseCommandLine(std::string_view argList,
                                   CommandLine::ParseOptions parseOptions) {
     if (!cmdLine.parse(argList, parseOptions)) {
-        for (auto& err : cmdLine.getErrors())
+        for (auto& err : cmdLine.getErrors()) {
             std::cerr << err << std::endl;
+        }
         exit(1);
     }
 }
 
 void SvBugpoint::parseCommandLine(int argc, char** argv) {
     if (!cmdLine.parse(argc, argv)) {
-        for (auto& err : cmdLine.getErrors())
+        for (auto& err : cmdLine.getErrors()) {
             std::cerr << err << std::endl;
+        }
         exit(1);
     }
 }

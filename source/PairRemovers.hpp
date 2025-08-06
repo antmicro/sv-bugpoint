@@ -35,8 +35,9 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
     void visitDefault(T&& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
-            if (child)
+            if (child) {
                 child->visit(*this, node.isChildOptional(i));
+            }
         }
     }
 

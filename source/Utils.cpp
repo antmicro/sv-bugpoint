@@ -59,8 +59,9 @@ class TreePrinter : public SyntaxVisitor<TDerived> {
     }
 
     void printIndent() {
-        for (int i = 0; i < indentLevel; ++i)
+        for (int i = 0; i < indentLevel; ++i) {
             out << " ";
+        }
     }
 
     template <typename T>
@@ -110,8 +111,9 @@ class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
         out << "node: " << STRINGIZE_NODE_TYPE(T) << " " << toString(node.kind) << " "
             << "\n";
         if constexpr (requires { node.getSyntax(); }) {
-            if (node.getSyntax())
+            if (node.getSyntax()) {
                 out << node.getSyntax()->toString() << "\n";
+            }
         }
         visitDefault(node);
     }
@@ -126,12 +128,13 @@ void printAst(const RootSymbol& root, std::ostream& file) {
 }
 
 std::string toString(SourceRange sourceRange) {
-    if (sourceRange == SourceRange::NoLocation)
+    if (sourceRange == SourceRange::NoLocation) {
         return "NO_LOCATION";
-    else
+    } else {
         return "buffer:" + std::to_string(sourceRange.start().buffer().getId()) +
                ", offsetStart: " + std::to_string(sourceRange.start().offset()) +
                ", offsetEnd: " + std::to_string(sourceRange.end().offset());
+    }
 }
 
 void copyFile(const std::string& from, const std::string& to) {

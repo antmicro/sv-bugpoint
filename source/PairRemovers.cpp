@@ -54,8 +54,9 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
     void handle(const InstanceSymbol& instance) {
         std::unordered_set<SourceRange> connectedPortDefs;
         for (auto conn : instance.getPortConnections()) {
-            if (!conn)
+            if (!conn) {
                 continue;
+            }
 
             SourceRange defLocation = getPortDefLoc(&conn->port);
             SourceRange useLocation = SourceRange::NoLocation;

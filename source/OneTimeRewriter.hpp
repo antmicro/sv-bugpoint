@@ -44,11 +44,13 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     void visitDefault(T&& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
-            if (child)
+            if (child) {
                 child->visit(*DERIVED, node.isChildOptional(i));
+            }
         }
-        if (node.getChildCount() == 0)  // leaf node
+        if (node.getChildCount() == 0) {  // leaf node
             node.visit(*DERIVED, true);
+        }
     }
 
     // Do some state bookkeeping, try to call type-specific handler, and visit node's children.
