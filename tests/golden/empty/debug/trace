@@ -1,0 +1,2 @@
+pass	stage	lines_removed	committed	time	idx	type_info	input_file
+-	dryRun	0	1	1ms	0	-	empty.sv

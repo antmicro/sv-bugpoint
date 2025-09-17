@@ -133,7 +133,7 @@ bool lineRemover(const std::string& stageName, const std::string& passIdx, SvBug
     size_t fileSize = st.st_size;
     if (fileSize == 0) {
         close(fd);
-        return true;
+        return false;
     }
 
     char* data =

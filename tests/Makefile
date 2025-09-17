@@ -46,6 +46,10 @@ test_short_exit1:
 test_short_grep:
 	@./run_test short_grep checkgrep.sh ${INPUT_DIR}/short_in.sv
 
+.PHONY: test_empty
+test_empty:
+	@timeout 15s ./run_test empty checkexit0.sh ${INPUT_DIR}/short_in/empty.sv
+
 .PHONY: test_comment_dir
 test_comment_dir:
 	@./run_test comment_dir checkverilator_run.sh ${INPUT_DIR}/comment_dir_in.sv
