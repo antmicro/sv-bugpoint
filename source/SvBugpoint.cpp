@@ -226,6 +226,7 @@ bool SvBugpoint::pass(const std::string& passIdx) {
         commited |= rewriteLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx, this);
         commited |= rewriteLoop<ModuleRemover>(tree, "moduleRemover", passIdx, this);
         commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
+        commited |= rewriteLoop<LabelRemover>(tree, "LabelRemover", passIdx, this);
     }
 
     return commited;

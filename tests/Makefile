@@ -52,7 +52,11 @@ test_empty:
 
 .PHONY: test_comment_dir
 test_comment_dir:
-	@./run_test comment_dir checkverilator_run.sh ${INPUT_DIR}/comment_dir_in.sv
+	@./run_test comment_dir checkverilator_run_finish.sh ${INPUT_DIR}/comment_dir_in.sv
+
+.PHONY: test_labels
+test_labels:
+	@./run_test labels checkverilator_run_finish.sh ${INPUT_DIR}/labels.sv
 
 .PHONY: test_caliptra
 test_caliptra: test_caliptra_exit0 test_caliptra_grep

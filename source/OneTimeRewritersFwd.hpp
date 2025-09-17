@@ -7,6 +7,7 @@ using namespace slang::syntax;
 // forward declarations of simple code removers that try to remove nodes one-by-one
 class BodyPartsRemover;
 class BodyRemover;
+class LabelRemover;
 class DeclRemover;
 class StatementsRemover;
 class ImportsRemover;
