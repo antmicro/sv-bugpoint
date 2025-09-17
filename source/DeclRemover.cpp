@@ -52,6 +52,16 @@ class DeclRemover : public OneTimeRewriter<DeclRemover> {
         removeNode(node, isNodeRemovable);
         return VISIT_CHILDREN;
     }
+
+    ShouldVisitChildren handle(const DPIImportSyntax& node, bool isNodeRemovable) {
+        removeNode(node, isNodeRemovable);
+        return VISIT_CHILDREN;
+    }
+
+    ShouldVisitChildren handle(const DPIExportSyntax& node, bool isNodeRemovable) {
+        removeNode(node, isNodeRemovable);
+        return VISIT_CHILDREN;
+    }
 };
 
 template bool rewriteLoop<DeclRemover>(std::shared_ptr<SyntaxTree>& tree,
