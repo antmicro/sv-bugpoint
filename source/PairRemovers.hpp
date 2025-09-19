@@ -4,7 +4,7 @@
 #include "Utils.hpp"
 
 class PairRemover : public SyntaxRewriter<PairRemover> {
-    // each tranform yields removal of pair of nodes (based on locations in suplied pairs list)
+    // each tranform yields removal of pair of nodes (based on locations in supplied pairs list)
    public:
     std::vector<std::pair<SourceRange, SourceRange>> pairs;
     std::pair<SourceRange, SourceRange> searchedPair;

@@ -10,13 +10,15 @@
 #include <iostream>
 #include "OneTimeRewritersFwd.hpp"
 #include "PairRemovers.hpp"
+#include "SetRemovers.hpp"
 #include "Utils.hpp"
 
 using namespace slang::syntax;
 using namespace slang::ast;
 using namespace slang;
 
-bool rewriteLoop(PairRemover rewriter,
+template <typename Rewriter>
+bool rewriteLoop(Rewriter rewriter,
                  std::shared_ptr<SyntaxTree>& tree,
                  std::string stageName,
                  std::string passIdx,
@@ -224,6 +226,8 @@ bool SvBugpoint::pass(const std::string& passIdx) {
         commited |= rewriteLoop<ModportRemover>(tree, "modportRemover", passIdx, this);
         commited |= rewriteLoop(makePortsRemover(tree), tree, "portsRemover", passIdx, this);
         commited |= rewriteLoop(makeStructFieldRemover(tree), tree, "structRemover", passIdx, this);
+        commited |=
+            rewriteLoop(makeFunctionArgRemover(tree), tree, "functionArgRemover", passIdx, this);
         commited |= rewriteLoop<ModuleRemover>(tree, "moduleRemover", passIdx, this);
         commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
         commited |= rewriteLoop<LabelRemover>(tree, "LabelRemover", passIdx, this);

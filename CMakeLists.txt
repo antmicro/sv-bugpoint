@@ -11,7 +11,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(slang)
 
-add_executable(sv-bugpoint source/SvBugpoint.cpp source/Utils.cpp source/PairRemovers.cpp source/BodyRemover.cpp source/LabelRemover.cpp
+add_executable(sv-bugpoint source/SvBugpoint.cpp source/Utils.cpp source/PairRemovers.cpp source/SetRemovers.cpp source/BodyRemover.cpp source/LabelRemover.cpp
   source/BodyPartsRemover.cpp source/DeclRemover.cpp source/InstantationRemover.cpp source/BindRemover.cpp source/ModportRemover.cpp source/ContAssignRemover.cpp source/ParamAssignRemover.cpp source/ModuleRemover.cpp
   source/StatementsRemover.cpp source/MemberRemover.cpp source/ImportsRemover.cpp source/TypeSimplifier.cpp)
 

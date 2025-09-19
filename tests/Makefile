@@ -62,6 +62,10 @@ test_labels:
 test_dpi:
 	@./run_test dpi checkverilator_lint.sh ${INPUT_DIR}/dpi.sv
 
+.PHONY: test_argument
+test_argument:
+	@./run_test argument checkverilator_run_finish.sh ${INPUT_DIR}/argument.sv
+
 .PHONY: test_caliptra
 test_caliptra: test_caliptra_exit0 test_caliptra_grep
 
