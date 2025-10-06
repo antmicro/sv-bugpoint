@@ -50,7 +50,7 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
         }
     }
 
-    std::vector<std::pair<SourceRange, SourceRange>> pairs;
+    std::vector<SetRemover::RemovalSet> removals;
     void handle(const InstanceSymbol& instance) {
         std::unordered_set<SourceRange> connectedPortDefs;
         for (auto conn : instance.getPortConnections()) {
@@ -68,7 +68,7 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
             }
 
             if (defLocation != SourceRange::NoLocation || useLocation != SourceRange::NoLocation) {
-                pairs.push_back({defLocation, useLocation});
+                removals.push_back({defLocation, useLocation});
             }
             if (defLocation != SourceRange::NoLocation) {
                 connectedPortDefs.emplace(defLocation);
@@ -79,27 +79,27 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
             SourceRange defLocation = getPortDefLoc(port);
             if (defLocation != SourceRange::NoLocation &&
                 !connectedPortDefs.contains(defLocation)) {
-                pairs.push_back({defLocation, SourceRange::NoLocation});
+                removals.push_back({defLocation});
             }
         }
         visitDefault(instance);
     }
 };
 
-PairRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree) {
+SetRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();  // kludge for launching full elaboration
     PortMapper mapper;
     compilation.getRoot().visit(mapper);
-    return PairRemover(std::move(mapper.pairs));
+    return SetRemover(std::move(mapper.removals));
 }
 
 class ExternMapper : public ASTVisitor<ExternMapper, true, true, true> {
     // Builds vector that maps the declarations (prototypes) and definitions (implementations) of
     // extern methods
    public:
-    std::vector<std::pair<SourceRange, SourceRange>> pairs;
+    std::vector<SetRemover::RemovalSet> removals;
 
     void handle(const GenericClassDefSymbol& t) {
         ASTVisitor<ExternMapper, true, true, true>::visitDefault(t);
@@ -125,25 +125,25 @@ class ExternMapper : public ASTVisitor<ExternMapper, true, true, true> {
         }
 
         if (protoLocation != SourceRange::NoLocation || implLocation != SourceRange::NoLocation) {
-            pairs.push_back({protoLocation, implLocation});
+            removals.push_back({protoLocation, implLocation});
         }
         visitDefault(proto);
     }
 };
 
-PairRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree) {
+SetRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();  // kludge for launching full elaboration
     ExternMapper mapper;
     compilation.getRoot().visit(mapper);
-    return PairRemover(std::move(mapper.pairs));
+    return SetRemover(std::move(mapper.removals));
 }
 
 class StructFieldMapper : public ASTVisitor<StructFieldMapper, true, true, true> {
     // Builds vector that maps the definitions  and initializations of struct fields
    public:
-    std::vector<std::pair<SourceRange, SourceRange>> pairs;
+    std::vector<SetRemover::RemovalSet> removals;
 
     void handle(const StructuredAssignmentPatternExpression& initializer) {
         for (auto setter : initializer.memberSetters) {
@@ -158,17 +158,17 @@ class StructFieldMapper : public ASTVisitor<StructFieldMapper, true, true, true>
                 initLoc = setter.expr->syntax->parent->sourceRange();
             }
 
-            pairs.push_back({defLoc, initLoc});
+            removals.push_back({defLoc, initLoc});
         }
         visitDefault(initializer);
     }
 };
 
-PairRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree> tree) {
+SetRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree> tree) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();  // kludge for launching full elaboration
     StructFieldMapper mapper;
     compilation.getRoot().visit(mapper);
-    return PairRemover(std::move(mapper.pairs));
+    return SetRemover(std::move(mapper.removals));
 }

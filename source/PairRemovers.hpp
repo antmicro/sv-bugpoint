@@ -2,6 +2,7 @@
 #pragma once
 #include <slang/syntax/SyntaxVisitor.h>
 #include "Utils.hpp"
+#include "SetRemovers.hpp"
 
 class PairRemover : public SyntaxRewriter<PairRemover> {
     // each tranform yields removal of pair of nodes (based on locations in supplied pairs list)
@@ -61,6 +62,6 @@ class PairRemover : public SyntaxRewriter<PairRemover> {
     }
 };
 
-PairRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree);
-PairRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree);
-PairRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree> tree);
+SetRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree);
+SetRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree);
+SetRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree> tree);
