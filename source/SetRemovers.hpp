@@ -6,10 +6,10 @@
 class SetRemover : public SyntaxRewriter<SetRemover> {
     // each transform yields removal of a set of nodes (based on locations in supplied sets list)
    public:
-    using RemovalSet = std::vector<const slang::syntax::SyntaxNode*>;
+    using RemovalSet = std::vector<SourceRange>;
 
     std::vector<RemovalSet> removals;
-    std::unordered_set<const slang::syntax::SyntaxNode*> pendingNodes;
+    std::unordered_set<SourceRange> pendingNodes;
     std::string removedTypeInfo;
 
     SetRemover(std::vector<RemovalSet>&& removals) : removals(removals) {}
@@ -25,8 +25,8 @@ class SetRemover : public SyntaxRewriter<SetRemover> {
         removals.pop_back();
         pendingNodes.clear();
         removedTypeInfo = "";
-        for (const auto* node : removal) {
-            if (node && node->sourceRange() != SourceRange::NoLocation) {
+        for (const auto node : removal) {
+            if (node != SourceRange::NoLocation) {
                 pendingNodes.insert(node);
             }
         }
@@ -65,10 +65,8 @@ class SetRemover : public SyntaxRewriter<SetRemover> {
 
     template <typename T>
     void visit(T&& node, bool isNodeRemovable = true) {
-        const auto* ptr = &node;
-        auto it = pendingNodes.find(ptr);
-        if (it != pendingNodes.end() && isNodeRemovable &&
-            node.sourceRange() != SourceRange::NoLocation) {
+        auto it = pendingNodes.find(node.sourceRange());
+        if (it != pendingNodes.end() && isNodeRemovable) {
             logType<T>();
             std::cerr << prefixLines(node.toString(), "-") << "\n";
             remove(node);

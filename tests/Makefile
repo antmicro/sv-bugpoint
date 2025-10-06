@@ -64,7 +64,8 @@ test_dpi:
 
 .PHONY: test_argument
 test_argument:
-	@./run_test argument checkverilator_run_finish.sh ${INPUT_DIR}/argument.sv
+	@./run_test argument checkverilator_run_finish.sh ${INPUT_DIR}/argument.sv && \
+	awk -F'\t' '/functionArgRemover/ && $$1 > 1 {print "check on trace failed - functionArgRemover should need only one pass"; exit(1)}' out/argument/debug/trace
 
 .PHONY: test_caliptra
 test_caliptra: test_caliptra_exit0 test_caliptra_grep

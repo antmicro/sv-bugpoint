@@ -43,9 +43,9 @@ class FunctionArgMapper : public ASTVisitor<FunctionArgMapper, true, true, true>
             if (removalIdx == invalidIndex) {
                 continue;
             }
-
-            if (const SyntaxNode* argNode = getArgumentNode(actuals[idx])) {
-                removals[removalIdx].push_back(argNode);
+            const SyntaxNode* argNode = getArgumentNode(actuals[idx]);
+            if (argNode && argNode->sourceRange() != SourceRange::NoLocation) {
+                removals[removalIdx].push_back(argNode->sourceRange());
             }
         }
 
@@ -66,13 +66,13 @@ class FunctionArgMapper : public ASTVisitor<FunctionArgMapper, true, true, true>
         }
 
         const SyntaxNode* node = getFormalNode(*formal);
-        if (!node) {
+        if (!node || node->sourceRange() == SourceRange::NoLocation) {
             indexByFormal.emplace(formal, invalidIndex);
             return invalidIndex;
         }
 
         SetRemover::RemovalSet set;
-        set.push_back(node);
+        set.push_back(node->sourceRange());
         removals.push_back(std::move(set));
         size_t idx = removals.size() - 1;
         indexByFormal.emplace(formal, idx);
