@@ -9,7 +9,6 @@
 #include <filesystem>
 #include <iostream>
 #include "OneTimeRewritersFwd.hpp"
-#include "PairRemovers.hpp"
 #include "SetRemovers.hpp"
 #include "Utils.hpp"
 
