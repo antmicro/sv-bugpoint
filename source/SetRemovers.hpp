@@ -25,9 +25,9 @@ class SetRemover : public SyntaxRewriter<SetRemover> {
         removals.pop_back();
         pendingNodes.clear();
         removedTypeInfo = "";
-        for (const auto node : removal) {
+        for (const auto& node : removal) {
             if (node != SourceRange::NoLocation) {
-                pendingNodes.insert(node);
+                pendingNodes.insert(std::move(node));
             }
         }
         if (pendingNodes.empty()) {
@@ -65,12 +65,10 @@ class SetRemover : public SyntaxRewriter<SetRemover> {
 
     template <typename T>
     void visit(T&& node, bool isNodeRemovable = true) {
-        auto it = pendingNodes.find(node.sourceRange());
-        if (it != pendingNodes.end() && isNodeRemovable) {
+        if (isNodeRemovable && pendingNodes.erase(node.sourceRange()) == 1) {
             logType<T>();
             std::cerr << prefixLines(node.toString(), "-") << "\n";
             remove(node);
-            pendingNodes.erase(it);
             return;
         }
         visitDefault(node);

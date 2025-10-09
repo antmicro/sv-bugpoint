@@ -3,7 +3,7 @@
 #include <slang/ast/ASTVisitor.h>
 #include <unordered_map>
 
-class FunctionArgMapper : public ASTVisitor<FunctionArgMapper, true, true, true> {
+class FunctionArgMapper final : public ASTVisitor<FunctionArgMapper, true, true, true> {
     // Builds vector that maps the argument in definition to all calls
    public:
     std::vector<SetRemover::RemovalSet> removals;
@@ -135,11 +135,10 @@ SetRemover makeFunctionArgRemover(std::shared_ptr<SyntaxTree> tree) {
     return SetRemover(std::move(mapper.removals));
 }
 
-class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
+class PortMapper final : public ASTVisitor<PortMapper, true, true, true> {
     // Builds vector that maps the definitions  and usages of ports
    public:
     class FindConnectionSyntax : public SyntaxVisitor<FindConnectionSyntax> {
-       public:
         // PortConnection symbol does not have getSyntax() or sourceRange() methods.
         // This visitor finds sourceRange by locating PortConnectionSyntax that contains the same
         // expression as symbol
@@ -150,6 +149,8 @@ class PortMapper : public ASTVisitor<PortMapper, true, true, true> {
         } state;
 
         SourceRange exprLoc;
+
+       public:
         SourceRange connLoc;
         FindConnectionSyntax(const PortConnection* symbol)
             : connLoc(SourceRange::NoLocation), state(WAIT_FOR_EXPR) {
@@ -227,7 +228,7 @@ SetRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree) {
     return SetRemover(std::move(mapper.removals));
 }
 
-class ExternMapper : public ASTVisitor<ExternMapper, true, true, true> {
+class ExternMapper final : public ASTVisitor<ExternMapper, true, true, true> {
     // Builds vector that maps the declarations (prototypes) and definitions (implementations) of
     // extern methods
    public:
@@ -245,11 +246,8 @@ class ExternMapper : public ASTVisitor<ExternMapper, true, true, true> {
     void handle(const MethodPrototypeSymbol& proto) {
         SourceRange protoLocation = SourceRange::NoLocation;
         SourceRange implLocation = SourceRange::NoLocation;
-        if (proto.getSyntax()) {
-            protoLocation = proto.getSyntax()->sourceRange();
-        } else {
-            exit(1);
-        }
+        ASSERT(proto.getSyntax(), "MethodPrototypeSymbol should have syntax node");
+        protoLocation = proto.getSyntax()->sourceRange();
 
         auto impl = proto.getSubroutine();
         if (impl && impl->getSyntax()) {
@@ -272,7 +270,7 @@ SetRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree) {
     return SetRemover(std::move(mapper.removals));
 }
 
-class StructFieldMapper : public ASTVisitor<StructFieldMapper, true, true, true> {
+class StructFieldMapper final : public ASTVisitor<StructFieldMapper, true, true, true> {
     // Builds vector that maps the definitions  and initializations of struct fields
    public:
     std::vector<SetRemover::RemovalSet> removals;
