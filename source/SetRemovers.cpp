@@ -3,6 +3,16 @@
 #include <slang/ast/ASTVisitor.h>
 #include <unordered_map>
 
+template <typename TNodeMapper>
+SetRemover makeSetRemover(std::shared_ptr<SyntaxTree> tree) {
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    TNodeMapper mapper;
+    compilation.getRoot().visit(mapper);
+    return SetRemover(std::move(mapper.removals));
+}
+
 class FunctionArgMapper final : public ASTVisitor<FunctionArgMapper, true, true, true> {
     // Builds vector that maps the argument in definition to all calls
    public:
@@ -127,12 +137,7 @@ class FunctionArgMapper final : public ASTVisitor<FunctionArgMapper, true, true,
 };
 
 SetRemover makeFunctionArgRemover(std::shared_ptr<SyntaxTree> tree) {
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();
-    FunctionArgMapper mapper;
-    compilation.getRoot().visit(mapper);
-    return SetRemover(std::move(mapper.removals));
+    return makeSetRemover<FunctionArgMapper>(tree);
 }
 
 class PortMapper final : public ASTVisitor<PortMapper, true, true, true> {
@@ -220,12 +225,7 @@ class PortMapper final : public ASTVisitor<PortMapper, true, true, true> {
 };
 
 SetRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree) {
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();  // kludge for launching full elaboration
-    PortMapper mapper;
-    compilation.getRoot().visit(mapper);
-    return SetRemover(std::move(mapper.removals));
+    return makeSetRemover<PortMapper>(tree);
 }
 
 class ExternMapper final : public ASTVisitor<ExternMapper, true, true, true> {
@@ -262,12 +262,7 @@ class ExternMapper final : public ASTVisitor<ExternMapper, true, true, true> {
 };
 
 SetRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree) {
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();  // kludge for launching full elaboration
-    ExternMapper mapper;
-    compilation.getRoot().visit(mapper);
-    return SetRemover(std::move(mapper.removals));
+    return makeSetRemover<ExternMapper>(tree);
 }
 
 class StructFieldMapper final : public ASTVisitor<StructFieldMapper, true, true, true> {
@@ -295,10 +290,5 @@ class StructFieldMapper final : public ASTVisitor<StructFieldMapper, true, true,
 };
 
 SetRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree> tree) {
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    compilation.getAllDiagnostics();  // kludge for launching full elaboration
-    StructFieldMapper mapper;
-    compilation.getRoot().visit(mapper);
-    return SetRemover(std::move(mapper.removals));
+    return makeSetRemover<StructFieldMapper>(tree);
 }
