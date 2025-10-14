@@ -102,6 +102,25 @@ bool SvBugpoint::test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats) {
     return test(stats);
 }
 
+std::shared_ptr<SyntaxTree> TreeLoader::load(fs::path file) {
+    // Creating new SourceManager is the simplest way of tree reloading as of now.
+    // See https://github.com/MikePopoloski/slang/discussions/733
+    delete sourceManager;
+    sourceManager = new SourceManager;
+    SyntaxTree::TreeOrError treeOrErr = SyntaxTree::fromFile(std::string(file), *sourceManager);
+    if (!treeOrErr) {
+        PRINTF_ERR("failed to load tree from '%s' file: %s\n", file.c_str(),
+                   std::string(treeOrErr.error().second).c_str());
+        exit(1);
+    }
+    originalTree = *treeOrErr;
+    return originalTree;
+}
+
+TreeLoader::~TreeLoader() {
+    delete sourceManager;
+}
+
 char* getNextDelim(char* line, char* end) {
     if (line >= end) {
         return nullptr;
@@ -115,7 +134,10 @@ char* getNextDelim(char* line, char* end) {
     return end;
 }
 
-bool lineRemover(const std::string& stageName, const std::string& passIdx, SvBugpoint* svBugpoint) {
+bool lineRemover(std::shared_ptr<SyntaxTree>& tree,
+                 const std::string& stageName,
+                 const std::string& passIdx,
+                 SvBugpoint* svBugpoint) {
     // Remove preprocessor directives and line comments line-by-line
     copyFile(svBugpoint->getMinimizedFile(), svBugpoint->getTmpFile());
     int fd = open(svBugpoint->getTmpFile().c_str(), O_RDWR);
@@ -190,27 +212,22 @@ bool lineRemover(const std::string& stageName, const std::string& passIdx, SvBug
     }
     munmap(data, fileSize);
     close(fd);
+
+    // reload tree to reflect changes done
+    tree = svBugpoint->treeLoader.load(svBugpoint->getMinimizedFile());
+
     return committed;
 }
 
 bool SvBugpoint::pass(const std::string& passIdx) {
     bool commited = false;
-    SourceManager sourceManager;
-    BumpAllocator alloc;
 
     for (size_t i = 0; i < minimizedFiles.size(); i++) {
         currentPathIdx = i;
 
-        commited |= lineRemover("lineRemover", passIdx, this);
+        auto tree = treeLoader.load(getMinimizedFile());
 
-        auto treeOrErr = SyntaxTree::fromFile(std::string(getMinimizedFile()), sourceManager);
-        if (!treeOrErr) {
-            PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
-                       std::string(treeOrErr.error().second).c_str());
-            exit(1);
-        }
-        auto tree = *treeOrErr;
-
+        commited |= lineRemover(tree, "lineRemover", passIdx, this);
         commited |= rewriteLoop<BodyRemover>(tree, "bodyRemover", passIdx, this);
         commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx, this);
         commited |= rewriteLoop<BindRemover>(tree, "bindRemover", passIdx, this);

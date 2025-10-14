@@ -7,6 +7,24 @@
 
 namespace fs = std::filesystem;
 
+// simple helper for (re)loading tree and keeping required resources alive until next reload
+class TreeLoader {
+   public:
+    std::shared_ptr<SyntaxTree> load(fs::path file);
+    ~TreeLoader();
+
+    TreeLoader() : originalTree(nullptr), sourceManager(nullptr) {}
+    TreeLoader(const TreeLoader&) = delete;
+    TreeLoader& operator=(const TreeLoader&) = delete;
+
+   private:
+    // https://github.com/MikePopoloski/slang/commit/dc010f37a82898e7ca5365d8a32c86f127b49b34
+    // is incomplete. Given A->B->C->D chain of tree transforms B,C,D still depend on original
+    // A tree. Hence, original tree must be kept alive until next load
+    std::shared_ptr<SyntaxTree> originalTree;
+    SourceManager* sourceManager;
+};
+
 class SvBugpoint {
    public:
     SvBugpoint() : currentPathIdx(0), currentAttemptIdx(0) {}
@@ -80,6 +98,8 @@ class SvBugpoint {
     }
 
     void saveCombinedOutput();
+
+    TreeLoader treeLoader;
 
    private:
     CommandLine cmdLine;
