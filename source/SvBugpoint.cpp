@@ -103,7 +103,7 @@ bool SvBugpoint::test(std::shared_ptr<SyntaxTree>& tree, AttemptStats& stats) {
 }
 
 char* getNextDelim(char* line, char* end) {
-    if (line > end) {
+    if (line >= end) {
         return nullptr;
     }
     while (line < end) {
@@ -150,7 +150,7 @@ bool lineRemover(const std::string& stageName, const std::string& passIdx, SvBug
     char* line = data;
     std::string removedLine;
     while ((nextDelim = getNextDelim(line, data + fileSize))) {
-        char* nextLine = nextDelim + 1;
+        char* nextLine = nextDelim != (data + fileSize) ? nextDelim + 1 : nextDelim;
         char* firstPrintable = line;
         while (*firstPrintable == ' ' || *firstPrintable == '\t') {
             firstPrintable++;

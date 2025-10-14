@@ -1,0 +1,2 @@
+
+// irremovable comment with no newline
