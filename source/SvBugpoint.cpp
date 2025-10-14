@@ -117,7 +117,7 @@ char* getNextDelim(char* line, char* end) {
 
 bool lineRemover(const std::string& stageName, const std::string& passIdx, SvBugpoint* svBugpoint) {
     // Remove preprocessor directives and line comments line-by-line
-
+    copyFile(svBugpoint->getMinimizedFile(), svBugpoint->getTmpFile());
     int fd = open(svBugpoint->getTmpFile().c_str(), O_RDWR);
     if (fd < 0) {
         perror("open");

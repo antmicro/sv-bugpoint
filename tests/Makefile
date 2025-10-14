@@ -5,7 +5,7 @@ test_dont_abort_after_err:
 	@$(MAKE) -k test
 
 .PHONY: test
-test: test_short test_caliptra test_comment_dir test_tricky_missing_newline
+test: test_short test_caliptra test_comment_dir test_tricky_missing_newline test_irremovable_verilator_config
 
 .PHONY: test_short
 test_short: test_short_exit0 test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg
@@ -57,6 +57,10 @@ test_comment_dir:
 .PHONY: test_tricky_missing_newline
 test_tricky_missing_newline:
 	@./run_test tricky_missing_newline checkgrep.sh input_files/tricky_missing_newline.sv
+
+.PHONY: test_irremovable_verilator_config
+test_irremovable_verilator_config:
+	@./run_test test_irremovable_verilator_config checkgrep.sh input_files/irremovable_cfg.sv
 
 .PHONY: test_labels
 test_labels:
