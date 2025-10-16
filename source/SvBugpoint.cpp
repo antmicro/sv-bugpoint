@@ -126,7 +126,7 @@ char* getNextDelim(char* line, char* end) {
         return nullptr;
     }
     while (line < end) {
-        if (*line == '\n' || *line == '\r' || *line == '\0') {
+        if (*line == '\n' || *line == '\0') {
             return line;
         }
         line++;
@@ -138,7 +138,7 @@ bool lineRemover(std::shared_ptr<SyntaxTree>& tree,
                  const std::string& stageName,
                  const std::string& passIdx,
                  SvBugpoint* svBugpoint) {
-    // Remove preprocessor directives and line comments line-by-line
+    // Remove preprocessor directives, empty lines and line comments line-by-line
     copyFile(svBugpoint->getMinimizedFile(), svBugpoint->getTmpFile());
     int fd = open(svBugpoint->getTmpFile().c_str(), O_RDWR);
     if (fd < 0) {
@@ -174,11 +174,14 @@ bool lineRemover(std::shared_ptr<SyntaxTree>& tree,
     while ((nextDelim = getNextDelim(line, data + fileSize))) {
         char* nextLine = nextDelim != (data + fileSize) ? nextDelim + 1 : nextDelim;
         char* firstPrintable = line;
-        while (*firstPrintable == ' ' || *firstPrintable == '\t') {
+        // NOTE: we assume here that \r is always part of \r\n
+        // It won't work for pre-OSX Macs newlines (single \r)
+        while (*firstPrintable == ' ' || *firstPrintable == '\t' || *firstPrintable == '\r') {
             firstPrintable++;
         }
         if (!((*firstPrintable == '`') ||
-              (*firstPrintable == '/' && *(firstPrintable + 1) == '/'))) {
+              (*firstPrintable == '/' && *(firstPrintable + 1) == '/') ||
+              (*firstPrintable == '\n'))) {
             line = nextLine;
             continue;
         }
