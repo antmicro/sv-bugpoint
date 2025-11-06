@@ -1,3 +1,3 @@
-module full_adder (
+module full_adder3 (
         input cin);
 endmodule

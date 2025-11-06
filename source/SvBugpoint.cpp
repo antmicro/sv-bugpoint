@@ -230,7 +230,6 @@ bool SvBugpoint::pass(const std::string& passIdx) {
 
         auto tree = treeLoader.load(getMinimizedFile());
 
-        commited |= lineRemover(tree, "lineRemover", passIdx, this);
         commited |= rewriteLoop<BodyRemover>(tree, "bodyRemover", passIdx, this);
         commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx, this);
         commited |= rewriteLoop<BindRemover>(tree, "bindRemover", passIdx, this);
@@ -250,6 +249,7 @@ bool SvBugpoint::pass(const std::string& passIdx) {
         commited |= rewriteLoop<ModuleRemover>(tree, "moduleRemover", passIdx, this);
         commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
         commited |= rewriteLoop<LabelRemover>(tree, "LabelRemover", passIdx, this);
+        commited |= lineRemover(tree, "lineRemover", passIdx, this);
     }
 
     return commited;
