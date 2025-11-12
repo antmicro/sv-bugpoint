@@ -3,12 +3,23 @@
 #include <iosfwd>
 #include "SvBugpoint.hpp"
 #include "Utils.hpp"
+#include "slang/text/SourceLocation.h"
 
 #define DERIVED static_cast<TDerived*>(this)
 
+struct CheckPoint {
+    SourceRange rewritePoint;
+    SourceRange childOrSibling;
+    SourceRange sibling;
+    CheckPoint(SourceRange rewritePoint)
+        : rewritePoint(rewritePoint),
+          childOrSibling(SourceRange::NoLocation),
+          sibling(SourceRange::NoLocation) {}
+};
+
 template <typename TDerived>
 class OneTimeRewriter : public SyntaxRewriter<TDerived> {
-    // Incremental node rewriter - each transform() yields one rewrite at most
+    // Incremental node rewriter - each transform() yields n rewrites at most
    public:
     enum State {
         SKIP_TO_START,
@@ -24,11 +35,11 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
         DONT_VISIT_CHILDREN,
     };
 
-    SourceRange startPoint;
+    SourceRange startPoint = SourceRange::NoLocation;
 
-    SourceRange rewritePoint;
-    SourceRange rewritePointChildren;
-    SourceRange rewritePointSuccessor;
+    std::vector<CheckPoint> checkPoints;
+
+    size_t rewriteLimit;
 
     State state = REWRITE_ALLOWED;
 
@@ -36,6 +47,8 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     // first minimize nodes at least 1024 lines long, then 512, and so on
     unsigned linesUpperLimit = INT_MAX;
     unsigned linesLowerLimit = 1024;
+
+    bool traversalDone = false;  // set once all line "windows" were tried
 
     std::string rewrittenTypeInfo;
 
@@ -63,16 +76,24 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
 
         if (state == REGISTER_CHILD && node.sourceRange() != SourceRange::NoLocation &&
             node.sourceRange() !=
-                rewritePoint) {  // avoid marking rewritten node as its own children
-            rewritePointChildren = node.sourceRange();
+                checkPoints.back()
+                    .rewritePoint) {  // avoid marking rewritten node as its own children
+            checkPoints.back().childOrSibling = node.sourceRange();
             state = EXIT_REWRITE_POINT;
             return;
         }
 
         if (state == REGISTER_SUCCESSOR && node.sourceRange() != SourceRange::NoLocation) {
-            rewritePointSuccessor = node.sourceRange();
-            state = SKIP_TO_END;
-            return;
+            checkPoints.back().sibling = node.sourceRange();
+            if (checkPoints.back().childOrSibling == SourceRange::NoLocation) {
+                checkPoints.back().childOrSibling = node.sourceRange();
+            }
+
+            if (checkPoints.size() < rewriteLimit) {
+                state = REWRITE_ALLOWED;
+            } else {
+                state = SKIP_TO_END;
+            }
         }
 
         if (state == SKIP_TO_END || state == EXIT_REWRITE_POINT) {
@@ -88,7 +109,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
         }
 
         if ((state == REGISTER_CHILD || state == EXIT_REWRITE_POINT) &&
-            node.sourceRange() == rewritePoint) {
+            node.sourceRange() == checkPoints.back().rewritePoint) {
             state = REGISTER_SUCCESSOR;
         }
     }
@@ -116,7 +137,10 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     template <typename T>
     void logType() {
         std::cerr << STRINGIZE_NODE_TYPE(T) << "\n";
-        rewrittenTypeInfo = STRINGIZE_NODE_TYPE(T);
+        if (!rewrittenTypeInfo.empty()) {
+            rewrittenTypeInfo += ",";
+        }
+        rewrittenTypeInfo += STRINGIZE_NODE_TYPE(T);
     }
 
     template <typename T>
@@ -125,7 +149,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
             logType<T>();
             std::cerr << prefixLines(node.toString(), "-") << "\n";
             DERIVED->remove(node);
-            rewritePoint = node.sourceRange();
+            checkPoints.push_back({node.sourceRange()});
             state = REGISTER_CHILD;
         }
     }
@@ -139,8 +163,8 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
                 std::cerr << prefixLines(item->toString(), "-");
             }
             std::cerr << "\n";
-            rewritePoint = parent.sourceRange();
-            state = REGISTER_CHILD;  // TODO: examine whether we register right child here
+            checkPoints.push_back({parent.sourceRange()});
+            state = REGISTER_CHILD;
         }
     }
 
@@ -151,82 +175,112 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
             std::cerr << prefixLines(originalNode.toString(), "-") << "\n";
             std::cerr << prefixLines(newNode.toString(), "+") << "\n";
             DERIVED->replace(originalNode, newNode);
-            rewritePoint = originalNode.sourceRange();
+            checkPoints.push_back({originalNode.sourceRange()});
             state = REGISTER_CHILD;
         }
     }
 
+    bool advanceLineWindow() {
+        if (linesLowerLimit == 1) {  // tried all possible sizes - finish
+            traversalDone = true;
+            return false;
+        } else {
+            state = REWRITE_ALLOWED;
+            startPoint = SourceRange::NoLocation;
+            linesUpperLimit = linesLowerLimit;
+            linesLowerLimit = linesLowerLimit / 2;
+            return true;
+        }
+    }
+
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree> tree,
-                                          bool& traversalDone,
-                                          AttemptStats& stats) {
-        // Apply one rewrite, and return changed tree.
-        // traversalDone is set when subsequent calls to transform would not make sense
-        rewritePoint = SourceRange::NoLocation;
-        rewritePointChildren = SourceRange::NoLocation;
-        rewritePointSuccessor = SourceRange::NoLocation;
+                                          AttemptStats& stats,
+                                          int n = 1) {
+        // Apply n rewrites, and return changed tree.
+        checkPoints.clear();
+        rewriteLimit = n;
+        rewrittenTypeInfo = "";
 
         auto tree2 = SyntaxRewriter<TDerived>::transform(tree);
 
-        if (rewritePointChildren == SourceRange::NoLocation &&
-            rewritePointSuccessor == SourceRange::NoLocation) {
-            // we have ran out of nodes of searched size - advance limit
-            linesUpperLimit = linesLowerLimit;
-            linesLowerLimit /= 2;
-            if (linesUpperLimit == 1) {  // tried all possible sizes - finish
-                traversalDone = true;
-            } else if (rewritePoint == SourceRange::NoLocation) {
-                // no node rewritten - retry with new limit
-                tree2 = transform(tree, traversalDone, stats);
-            }
+        if (checkPoints.size() == 0 && advanceLineWindow()) {
+            // we have run out of nodes of searched size - retry with new line window if possible
+            return transform(tree, stats, n);
         }
 
         stats.typeInfo = rewrittenTypeInfo;
         return tree2;
     }
 
-    void moveStartToSuccesor() {
-        // Start next transform from successor of rewritten node.
-        // Meant be run when you decided to commit removal (i.e you pass just transformed tree for
-        // next transform)
-        startPoint = rewritePointSuccessor;
-        state = SKIP_TO_START;
+    void moveToPoint(SourceRange point) {
+        // Start next transform from suplied node
+        startPoint = point;
+        if (startPoint == SourceRange::NoLocation) {
+            advanceLineWindow();
+        } else {
+            state = SKIP_TO_START;
+        }
     }
 
-    void moveStartToChildOrSuccesor() {
-        // Start next transform from child of rewritten node if possible, otherwise, from its
-        // successor. Meant to be run when you decide to rollback removal (i.e. you're discarding a
-        // just transformed tree)
-        if (rewritePointChildren != SourceRange::NoLocation) {
-            startPoint = rewritePointChildren;
+    void retry() {
+        // Start next transform from first rewritten node.
+        // Meant to be run when you decide to rollback removal (i.e. you're discarding a
+        // just transformed tree), and retry it subset
+        if (startPoint == SourceRange::NoLocation) {
+            state = REWRITE_ALLOWED;
         } else {
-            startPoint = rewritePointSuccessor;
+            state = SKIP_TO_START;
         }
-        state = SKIP_TO_START;
     }
 };
+
+enum class RewriteResult {
+    PASS,
+    FAIL,
+    NONE,
+};
+
+template <typename T>
+RewriteResult rewrite(T& rewriter,
+                      std::shared_ptr<SyntaxTree>& tree,
+                      std::string stageName,
+                      std::string passIdx,
+                      SvBugpoint* svBugpoint,
+                      int n) {
+    auto stats = AttemptStats(passIdx, stageName, svBugpoint);
+    auto tmpTree = rewriter.transform(tree, stats, n);
+
+    if (rewriter.traversalDone && tmpTree == tree) {
+        return RewriteResult::NONE;  // no change - no reason to test
+    }
+
+    if (svBugpoint->test(tmpTree, stats)) {
+        tree = tmpTree;
+        return RewriteResult::PASS;
+    } else {
+        return RewriteResult::FAIL;
+    }
+}
 
 template <typename T>
 bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
                  std::string stageName,
                  std::string passIdx,
                  SvBugpoint* svBugpoint) {
+    using enum RewriteResult;
     T rewriter;
     bool committed = false;
-    bool traversalDone = false;
 
-    while (!traversalDone) {
-        auto stats = AttemptStats(passIdx, stageName, svBugpoint);
-        ;
-        auto tmpTree = rewriter.transform(tree, traversalDone, stats);
-        if (traversalDone && tmpTree == tree) {
-            break;  // no change - no reason to test
-        }
-        if (svBugpoint->test(tmpTree, stats)) {
-            tree = tmpTree;
-            rewriter.moveStartToSuccesor();
+    while (!rewriter.traversalDone) {
+        RewriteResult result = rewrite(rewriter, tree, stageName, passIdx, svBugpoint, 1);
+        if (result == PASS) {
+            rewriter.moveToPoint(rewriter.checkPoints.back().sibling);
             committed = true;
+        } else if (result == FAIL) {
+            rewriter.moveToPoint(rewriter.checkPoints[0].childOrSibling);
         } else {
-            rewriter.moveStartToChildOrSuccesor();
+            assert(result == NONE);
+            break;
         }
     }
     return committed;

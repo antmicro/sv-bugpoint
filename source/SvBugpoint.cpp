@@ -455,7 +455,15 @@ void SvBugpoint::addArgs() {
             return "";
         },
         "Adds all files from directory", "<dir-pattern>[,...]", CommandLineFlags::CommaList);
-
+    cmdLine.add(
+        "--n-at-once",
+        [this](std::string_view value) {
+            n_at_once = std::stoi(std::string(value));
+            return "";
+        },
+        "Instead of doing one minimzation at the time, try to speculativly merge each n attempts "
+        "into single one.\n"
+        "Currently, it applies only to OneTimeRewriters");
     cmdLine.setPositional(
         [this](std::string_view value) {
             if (workDir.empty()) {

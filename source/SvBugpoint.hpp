@@ -101,6 +101,10 @@ class SvBugpoint {
 
     TreeLoader treeLoader;
 
+    // instead of doing one minimzation at time, try to speculativly merge n attempts into single
+    // one
+    int n_at_once = 1;
+
    private:
     CommandLine cmdLine;
 
