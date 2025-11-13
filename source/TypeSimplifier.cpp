@@ -36,7 +36,7 @@ class TypeSimplifier : public OneTimeRewriter<TypeSimplifier> {
     }
 
     ShouldVisitChildren handle(const DataTypeSyntax& node, bool isNodeRemovable) {
-        if (state == REMOVAL_ALLOWED && canSimplify(&node)) {
+        if (shouldReplace(node) && canSimplify(&node)) {
             replaceNode(node, *makeIntNode(node.sourceRange().start()));
         }
         return VISIT_CHILDREN;

@@ -12,7 +12,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
    public:
     enum State {
         SKIP_TO_START,
-        REMOVAL_ALLOWED,
+        REWRITE_ALLOWED,
         REGISTER_CHILD,
         EXIT_REWRITE_POINT,
         REGISTER_SUCCESSOR,
@@ -30,7 +30,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     SourceRange rewritePointChildren;
     SourceRange rewritePointSuccessor;
 
-    State state = REMOVAL_ALLOWED;
+    State state = REWRITE_ALLOWED;
 
     // As an optimization we do minimization in quasi-sorted way:
     // first minimize nodes at least 1024 lines long, then 512, and so on
@@ -58,7 +58,7 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     template <typename T>
     void visit(T&& node, bool isNodeRemovable = true) {
         if (state == SKIP_TO_START && node.sourceRange() == startPoint) {
-            state = REMOVAL_ALLOWED;
+            state = REWRITE_ALLOWED;
         }
 
         if (state == REGISTER_CHILD && node.sourceRange() != SourceRange::NoLocation &&
@@ -96,15 +96,21 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
     template <typename T>
     bool shouldRemove(const T& node, bool isNodeRemovable) {
         unsigned len = std::ranges::count(node.toString(), '\n') + 1;
-        return state == REMOVAL_ALLOWED && isNodeRemovable && len >= linesLowerLimit &&
+        return state == REWRITE_ALLOWED && isNodeRemovable && len >= linesLowerLimit &&
                len < linesUpperLimit;
     }
 
     template <typename T>
     bool shouldRemove(const SyntaxList<T>& list) {
         unsigned len = std::ranges::count(list.toString(), '\n') + 1;
-        return state == REMOVAL_ALLOWED && list.getChildCount() && len >= linesLowerLimit &&
+        return state == REWRITE_ALLOWED && list.getChildCount() && len >= linesLowerLimit &&
                len < linesUpperLimit;
+    }
+
+    template <typename T>
+    bool shouldReplace(const T& node) {
+        unsigned len = std::ranges::count(node.toString(), '\n') + 1;
+        return state == REWRITE_ALLOWED && len >= linesLowerLimit && len < linesUpperLimit;
     }
 
     template <typename T>
@@ -140,12 +146,14 @@ class OneTimeRewriter : public SyntaxRewriter<TDerived> {
 
     template <typename TOrig, typename TNew>
     void replaceNode(const TOrig& originalNode, TNew& newNode) {
-        logType<TOrig>();
-        std::cerr << prefixLines(originalNode.toString(), "-") << "\n";
-        std::cerr << prefixLines(newNode.toString(), "+") << "\n";
-        DERIVED->replace(originalNode, newNode);
-        rewritePoint = originalNode.sourceRange();
-        state = REGISTER_CHILD;
+        if (shouldReplace(originalNode)) {
+            logType<TOrig>();
+            std::cerr << prefixLines(originalNode.toString(), "-") << "\n";
+            std::cerr << prefixLines(newNode.toString(), "+") << "\n";
+            DERIVED->replace(originalNode, newNode);
+            rewritePoint = originalNode.sourceRange();
+            state = REGISTER_CHILD;
+        }
     }
 
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree> tree,
