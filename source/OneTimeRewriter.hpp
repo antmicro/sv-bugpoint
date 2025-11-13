@@ -270,14 +270,22 @@ bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
     using enum RewriteResult;
     T rewriter;
     bool committed = false;
+    int rewriteLimit = svBugpoint->n_at_once;
 
     while (!rewriter.traversalDone) {
-        RewriteResult result = rewrite(rewriter, tree, stageName, passIdx, svBugpoint, 1);
+        RewriteResult result = rewrite(rewriter, tree, stageName, passIdx, svBugpoint, rewriteLimit);
         if (result == PASS) {
             rewriter.moveToPoint(rewriter.checkPoints.back().sibling);
+            rewriteLimit = svBugpoint->n_at_once;
             committed = true;
         } else if (result == FAIL) {
-            rewriter.moveToPoint(rewriter.checkPoints[0].childOrSibling);
+            if (rewriteLimit == 1) {
+                rewriteLimit = 1;
+                rewriter.moveToPoint(rewriter.checkPoints[0].childOrSibling);
+            } else {
+                rewriteLimit = 1;
+                rewriter.retry();
+            }
         } else {
             assert(result == NONE);
             break;
