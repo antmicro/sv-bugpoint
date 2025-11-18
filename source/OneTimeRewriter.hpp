@@ -263,6 +263,64 @@ RewriteResult rewrite(T& rewriter,
 }
 
 template <typename T>
+size_t rewriteBisectFailed(T& rewriter,
+                           std::shared_ptr<SyntaxTree>& tree,
+                           std::string stageName,
+                           std::string passIdx,
+                           SvBugpoint* svBugpoint,
+                           size_t n) {
+    // like rewriteBisect, but assume that removing all n nodes would fail
+    if (n == 0 || n == 1) {
+        return 0;
+    }
+
+    using enum RewriteResult;
+    size_t rewritten = rewriteBisect(rewriter, tree, stageName, passIdx, svBugpoint, n / 2, false);
+    if (rewritten < n / 2) {
+        // The culprit was in [0, n/2)
+        return rewritten;
+    } else {
+        // The culprit is in remaining nodes
+        size_t remainingNodes = n - rewritten;
+        return rewritten +
+               rewriteBisectFailed(rewriter, tree, stageName, passIdx, svBugpoint, remainingNodes);
+    }
+}
+
+template <typename T>
+size_t rewriteBisect(T& rewriter,
+                     std::shared_ptr<SyntaxTree>& tree,
+                     std::string stageName,
+                     std::string passIdx,
+                     SvBugpoint* svBugpoint,
+                     size_t n,
+                     bool topMostCall = true) {
+    RewriteResult result = rewrite(rewriter, tree, stageName, passIdx, svBugpoint, n);
+
+    if (result == RewriteResult::PASS) {
+        rewriter.moveToPoint(rewriter.checkPoints.back().sibling);
+        return rewriter.checkPoints.size();
+    } else if (result == RewriteResult::FAIL) {
+        rewriter.retry();
+        if (topMostCall) {
+            auto checkPoints = rewriter.checkPoints;
+            size_t rewritten = rewriteBisectFailed(rewriter, tree, stageName, passIdx, svBugpoint,
+                                                   checkPoints.size());
+            // The culprit sits after the last succesfully rewritten node.
+            // Next attempts should start from its children
+            rewriter.moveToPoint(checkPoints[rewritten].childOrSibling);
+            return rewritten;
+        } else {
+            return rewriteBisectFailed(rewriter, tree, stageName, passIdx, svBugpoint,
+                                       rewriter.checkPoints.size());
+        }
+    } else {
+        assert(result == RewriteResult::NONE && topMostCall);
+        return 0;
+    }
+}
+
+template <typename T>
 bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
                  std::string stageName,
                  std::string passIdx,
@@ -270,25 +328,9 @@ bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
     using enum RewriteResult;
     T rewriter;
     bool committed = false;
-    int rewriteLimit = svBugpoint->n_at_once;
-
     while (!rewriter.traversalDone) {
-        RewriteResult result = rewrite(rewriter, tree, stageName, passIdx, svBugpoint, rewriteLimit);
-        if (result == PASS) {
-            rewriter.moveToPoint(rewriter.checkPoints.back().sibling);
-            rewriteLimit = svBugpoint->n_at_once;
+        if (rewriteBisect(rewriter, tree, stageName, passIdx, svBugpoint, svBugpoint->n_at_once)) {
             committed = true;
-        } else if (result == FAIL) {
-            if (rewriteLimit == 1) {
-                rewriteLimit = 1;
-                rewriter.moveToPoint(rewriter.checkPoints[0].childOrSibling);
-            } else {
-                rewriteLimit = 1;
-                rewriter.retry();
-            }
-        } else {
-            assert(result == NONE);
-            break;
         }
     }
     return committed;
