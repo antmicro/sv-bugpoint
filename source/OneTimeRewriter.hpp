@@ -328,9 +328,15 @@ bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
     using enum RewriteResult;
     T rewriter;
     bool committed = false;
+    size_t rewriteLimit = svBugpoint->n_at_once;
     while (!rewriter.traversalDone) {
-        if (rewriteBisect(rewriter, tree, stageName, passIdx, svBugpoint, svBugpoint->n_at_once)) {
+        size_t rewritten =
+            rewriteBisect(rewriter, tree, stageName, passIdx, svBugpoint, rewriteLimit);
+        if (rewritten >= 1) {
+            rewriteLimit = svBugpoint->n_at_once;
             committed = true;
+        } else {
+            rewriteLimit = 1;
         }
     }
     return committed;
