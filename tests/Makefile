@@ -8,11 +8,16 @@ test_dont_abort_after_err:
 test: test_short test_caliptra test_comment_dir test_tricky_missing_newline test_irremovable_verilator_config test_comment_dir2
 
 .PHONY: test_short
-test_short: test_short_exit0 test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg
+test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg
 
 .PHONY: test_short_exit0
 test_short_exit0:
 	@./run_test short_exit0 checkexit0.sh ${INPUT_DIR}/short_in.sv
+
+.PHONY: test_truncator
+test_truncator:
+	@./run_test truncator checkexit0.sh ${INPUT_DIR}/short_in.sv
+	@awk -F'\t' '$$2=="fileTruncator" && $$4=="1"{found=1} END{if(!found){print "FAILED: fileTruncator pass not committed" > "/dev/stderr"; exit(1)}}' out/truncator/debug/trace
 
 .PHONY: test_short_verilator_errmsg
 test_short_verilator_errmsg:

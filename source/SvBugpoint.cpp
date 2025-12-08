@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include "OneTimeRewritersFwd.hpp"
 #include "SetRemovers.hpp"
@@ -222,6 +223,31 @@ bool lineRemover(std::shared_ptr<SyntaxTree>& tree,
     return committed;
 }
 
+bool fileTruncator(std::shared_ptr<SyntaxTree>& tree,
+                   const std::string& stageName,
+                   const std::string& passIdx,
+                   SvBugpoint* svBugpoint) {
+    if (std::filesystem::is_empty(svBugpoint->getMinimizedFile())) {
+        return false;
+    }
+
+    std::ofstream tmpFile(svBugpoint->getTmpFile(), std::ios::trunc);
+    if (!tmpFile.is_open()) {
+        PRINTF_ERR("failed to truncate '%s'\n", svBugpoint->getTmpFile().c_str());
+        exit(1);
+    }
+    tmpFile.close();
+
+    auto stats = AttemptStats(passIdx, stageName, svBugpoint);
+    stats.typeInfo = "-";
+    if (svBugpoint->test(stats)) {
+        tree = svBugpoint->treeLoader.load(svBugpoint->getMinimizedFile());
+        return true;
+    }
+
+    return false;
+}
+
 bool SvBugpoint::pass(const std::string& passIdx) {
     bool commited = false;
 
@@ -230,6 +256,7 @@ bool SvBugpoint::pass(const std::string& passIdx) {
 
         auto tree = treeLoader.load(getMinimizedFile());
 
+        commited |= fileTruncator(tree, "fileTruncator", passIdx, this);
         commited |= rewriteLoop<BodyRemover>(tree, "bodyRemover", passIdx, this);
         commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx, this);
         commited |= rewriteLoop<BindRemover>(tree, "bindRemover", passIdx, this);
