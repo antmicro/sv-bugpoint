@@ -36,7 +36,7 @@ to your path, as some scripts may depend on each other.
 ## Usage
 
 First, you need to prepare:
-- a script that takes the path to a SystemVerilog file as the first argument and asserts that the same bug (or another property you wish to preserve) is still occurring.
+- a script that takes one or more paths to SystemVerilog files as command-line arguments and asserts that the same bug (or another property you wish to preserve) is still occurring.
 It should exit with 0 if the assertion is successful.
 For reference, see [`examples/caliptra_verilation_err/sv-bugpoint-check.sh`](examples/caliptra_verilation_err/sv-bugpoint-check.sh) and [`examples/caliptra_vcd/sv-bugpoint-check.sh`](examples/caliptra_vcd/sv-bugpoint-check.sh).
 The script can be written in any language you are comfortable with, it just needs to be an executable. See the Python example: [`examples/caliptra_verilation_err/sv-bugpoint-check.py`](examples/caliptra_verilation_err/sv-bugpoint-check.py).
