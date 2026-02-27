@@ -461,9 +461,10 @@ void SvBugpoint::addArgs() {
             n_at_once = std::stoi(std::string(value));
             return "";
         },
-        "Instead of doing one minimzation at the time, try to speculativly merge each n attempts "
-        "into single one.\n"
-        "Currently, it applies only to OneTimeRewriters");
+        "Speculatively merge up to n reductions into a single one.\n"
+        "Default (32) should be good for most cases.\n"
+        "n=1 disables merging entirely.",
+        "<n>");
     cmdLine.setPositional(
         [this](std::string_view value) {
             if (workDir.empty()) {

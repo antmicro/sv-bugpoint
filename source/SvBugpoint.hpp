@@ -101,9 +101,10 @@ class SvBugpoint {
 
     TreeLoader treeLoader;
 
-    // instead of doing one minimzation at time, try to speculativly merge n attempts into single
-    // one
-    int n_at_once = 1;
+    // Speculatively merge up to n minimization attempts into
+    // single one to reduce check script calls.
+    // Currently it only applies to OneTimeRewriters.
+    int n_at_once = 32;
 
    private:
     CommandLine cmdLine;
