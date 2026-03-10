@@ -100,6 +100,29 @@ test_caliptra_exit0:
 test_calipta_exit1:
 	@./run_test caliptra_exit1 checkexit1.sh ${INPUT_DIR}/caliptra_in.sv
 
+.PHONY: test_caliptra_grep_default
+test_caliptra_grep_default:
+	@./run_test caliptra_grep_default checkgrep.sh ${INPUT_DIR}/caliptra_in.sv
+
+.PHONY: test_caliptra_grep_1_at_once
+test_caliptra_grep_1_at_once:
+	@./run_test caliptra_grep_1_at_once checkgrep.sh ${INPUT_DIR}/caliptra_in.sv --n-at-once 1
+
 .PHONY: test_caliptra_grep
-test_caliptra_grep:
-	@./run_test caliptra_grep checkgrep.sh ${INPUT_DIR}/caliptra_in.sv
+test_caliptra_grep: test_caliptra_grep_default test_caliptra_grep_1_at_once
+	@# check if speculative reduction (used by default) lead to significant improvement
+	@# in terms of number of check script runs
+	@printf "TEST: caliptra_grep (speculative vs 1-at-once perf)\n"
+	@wc -l out/caliptra_grep_default/debug/trace out/caliptra_grep_1_at_once/debug/trace --total never | awk '\
+	NR==1{speculative=$$1} \
+	NR==2{serial=$$1} \
+	END{ \
+		ratio=serial/speculative; \
+		expected_ratio=8; \
+		if (ratio >= expected_ratio) { \
+			printf("PASSED: speculative scheme significantly reduces number of check script runs (ratio = %.2f, expected >= %.2f)\n", ratio, expected_ratio); \
+		} else { \
+			printf("FAILED: speculative scheme should significantly reduce number of check script runs (ratio = %.2f, expected >= %.2f)\n", ratio, expected_ratio); \
+			exit(1); \
+		} \
+	}'
