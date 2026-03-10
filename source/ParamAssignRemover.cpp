@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-#include "OneTimeRewriter.hpp"
+#include "IncrementalRewriter.hpp"
 
-class ParamAssignRemover : public OneTimeRewriter<ParamAssignRemover> {
+class ParamAssignRemover : public IncrementalRewriter<ParamAssignRemover> {
    public:
     ShouldVisitChildren handle(const ParameterValueAssignmentSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);

@@ -103,7 +103,7 @@ class SvBugpoint {
 
     // Speculatively merge up to n minimization attempts into
     // single one to reduce check script calls.
-    // Currently it only applies to OneTimeRewriters.
+    // Currently it only applies to IncrementalRewriters.
     int n_at_once = 32;
 
    private:

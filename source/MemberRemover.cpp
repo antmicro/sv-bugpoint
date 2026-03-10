@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-#include "OneTimeRewriter.hpp"
+#include "IncrementalRewriter.hpp"
 
-class MemberRemover : public OneTimeRewriter<MemberRemover> {
+class MemberRemover : public IncrementalRewriter<MemberRemover> {
    public:
     ShouldVisitChildren handle(const DataDeclarationSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);

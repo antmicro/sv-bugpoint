@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-#include "OneTimeRewriter.hpp"
+#include "IncrementalRewriter.hpp"
 
-class BindRemover : public OneTimeRewriter<BindRemover> {
+class BindRemover : public IncrementalRewriter<BindRemover> {
    public:
     ShouldVisitChildren handle(const BindDirectiveSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);

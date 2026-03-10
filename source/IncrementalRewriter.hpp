@@ -18,7 +18,7 @@ struct CheckPoint {
 };
 
 template <typename TDerived>
-class OneTimeRewriter : public SyntaxRewriter<TDerived> {
+class IncrementalRewriter : public SyntaxRewriter<TDerived> {
     // Incremental node rewriter - each transform() yields n rewrites at most
    public:
     enum State {
@@ -241,7 +241,7 @@ enum class RewriteResult {
 };
 
 template <typename TDerived>
-RewriteResult rewrite(OneTimeRewriter<TDerived>& rewriter,
+RewriteResult rewrite(IncrementalRewriter<TDerived>& rewriter,
                       std::shared_ptr<SyntaxTree>& tree,
                       std::string stageName,
                       std::string passIdx,
@@ -263,7 +263,7 @@ RewriteResult rewrite(OneTimeRewriter<TDerived>& rewriter,
 }
 
 template <typename TDerived>
-size_t rewriteBisectFailed(OneTimeRewriter<TDerived>& rewriter,
+size_t rewriteBisectFailed(IncrementalRewriter<TDerived>& rewriter,
                            std::shared_ptr<SyntaxTree>& tree,
                            std::string stageName,
                            std::string passIdx,
@@ -288,7 +288,7 @@ size_t rewriteBisectFailed(OneTimeRewriter<TDerived>& rewriter,
 }
 
 template <typename TDerived>
-size_t rewriteBisect(OneTimeRewriter<TDerived>& rewriter,
+size_t rewriteBisect(IncrementalRewriter<TDerived>& rewriter,
                      std::shared_ptr<SyntaxTree>& tree,
                      std::string stageName,
                      std::string passIdx,
@@ -326,7 +326,7 @@ bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
                  std::string passIdx,
                  SvBugpoint* svBugpoint) {
     using enum RewriteResult;
-    OneTimeRewriter<TDerived> rewriter;
+    IncrementalRewriter<TDerived> rewriter;
     bool committed = false;
     size_t rewriteLimit = svBugpoint->n_at_once;
     while (!rewriter.traversalDone) {

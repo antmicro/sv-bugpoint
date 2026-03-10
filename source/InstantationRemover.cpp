@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-#include "OneTimeRewriter.hpp"
+#include "IncrementalRewriter.hpp"
 
-class InstantationRemover : public OneTimeRewriter<InstantationRemover> {
+class InstantationRemover : public IncrementalRewriter<InstantationRemover> {
    public:
     ShouldVisitChildren handle(const HierarchyInstantiationSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);

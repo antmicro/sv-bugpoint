@@ -1,4 +1,4 @@
-#include "OneTimeRewriter.hpp"
+#include "IncrementalRewriter.hpp"
 
 class IsPrimitive : public SyntaxVisitor<IsPrimitive> {
    public:
@@ -18,7 +18,7 @@ class IsPrimitive : public SyntaxVisitor<IsPrimitive> {
     void handle(const ImplicitTypeSyntax& t) { isPrimitive = true; }
 };
 
-class TypeSimplifier : public OneTimeRewriter<TypeSimplifier> {
+class TypeSimplifier : public IncrementalRewriter<TypeSimplifier> {
     // replace references to user-defined types with int
    public:
     bool canSimplify(not_null<const DataTypeSyntax*> node) {

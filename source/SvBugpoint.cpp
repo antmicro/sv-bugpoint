@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include "OneTimeRewritersFwd.hpp"
+#include "IncrementalRewritersFwd.hpp"
 #include "SetRemovers.hpp"
 #include "Utils.hpp"
 
