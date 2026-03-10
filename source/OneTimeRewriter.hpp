@@ -240,8 +240,8 @@ enum class RewriteResult {
     NONE,
 };
 
-template <typename T>
-RewriteResult rewrite(T& rewriter,
+template <typename TDerived>
+RewriteResult rewrite(OneTimeRewriter<TDerived>& rewriter,
                       std::shared_ptr<SyntaxTree>& tree,
                       std::string stageName,
                       std::string passIdx,
@@ -262,8 +262,8 @@ RewriteResult rewrite(T& rewriter,
     }
 }
 
-template <typename T>
-size_t rewriteBisectFailed(T& rewriter,
+template <typename TDerived>
+size_t rewriteBisectFailed(OneTimeRewriter<TDerived>& rewriter,
                            std::shared_ptr<SyntaxTree>& tree,
                            std::string stageName,
                            std::string passIdx,
@@ -287,8 +287,8 @@ size_t rewriteBisectFailed(T& rewriter,
     }
 }
 
-template <typename T>
-size_t rewriteBisect(T& rewriter,
+template <typename TDerived>
+size_t rewriteBisect(OneTimeRewriter<TDerived>& rewriter,
                      std::shared_ptr<SyntaxTree>& tree,
                      std::string stageName,
                      std::string passIdx,
@@ -320,13 +320,13 @@ size_t rewriteBisect(T& rewriter,
     }
 }
 
-template <typename T>
+template <typename TDerived>
 bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
                  std::string stageName,
                  std::string passIdx,
                  SvBugpoint* svBugpoint) {
     using enum RewriteResult;
-    T rewriter;
+    OneTimeRewriter<TDerived> rewriter;
     bool committed = false;
     size_t rewriteLimit = svBugpoint->n_at_once;
     while (!rewriter.traversalDone) {

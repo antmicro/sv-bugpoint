@@ -17,8 +17,7 @@ using namespace slang::syntax;
 using namespace slang::ast;
 using namespace slang;
 
-template <typename Rewriter>
-bool rewriteLoop(Rewriter rewriter,
+bool rewriteLoop(SetRemover rewriter,
                  std::shared_ptr<SyntaxTree>& tree,
                  std::string stageName,
                  std::string passIdx,
