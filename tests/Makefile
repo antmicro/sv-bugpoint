@@ -8,7 +8,7 @@ test_dont_abort_after_err:
 test: test_short test_caliptra test_comment_dir test_tricky_missing_newline test_irremovable_verilator_config test_comment_dir2
 
 .PHONY: test_short
-test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg
+test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg test_generate
 
 .PHONY: test_short_exit0
 test_short_exit0:
@@ -46,6 +46,10 @@ test_short_multi_file_flag_f_verilator_errmsg:
 .PHONY: test_short_exit1
 test_short_exit1:
 	@./run_test short_exit1 checkexit1.sh ${INPUT_DIR}/short_in.sv
+
+.PHONY: test_generate
+test_generate:
+	@./run_test generate checkverilator_run_finish.sh ${INPUT_DIR}/generate.sv
 
 .PHONY: test_short_grep
 test_short_grep:

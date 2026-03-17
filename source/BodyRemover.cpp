@@ -22,6 +22,16 @@ class BodyRemover : public OneTimeRewriter<BodyRemover> {
         removeChildList(node, node.items);
         return VISIT_CHILDREN;
     }
+
+    ShouldVisitChildren handle(const GenerateBlockSyntax& node, bool isNodeRemovable) {
+        removeNode(node, isNodeRemovable);
+        return VISIT_CHILDREN;
+    }
+
+    ShouldVisitChildren handle(const GenerateRegionSyntax& node, bool isNodeRemovable) {
+        removeNode(node, isNodeRemovable);
+        return VISIT_CHILDREN;
+    }
 };
 
 template bool rewriteLoop<BodyRemover>(std::shared_ptr<SyntaxTree>& tree,

@@ -13,6 +13,11 @@ class MemberRemover : public OneTimeRewriter<MemberRemover> {
         return VISIT_CHILDREN;
     }
 
+    ShouldVisitChildren handle(const GenvarDeclarationSyntax& node, bool isNodeRemovable) {
+        removeNode(node, isNodeRemovable);
+        return DONT_VISIT_CHILDREN;
+    }
+
     ShouldVisitChildren handle(const StructUnionMemberSyntax& node, bool isNodeRemovable) {
         removeNode(node, isNodeRemovable);
         return DONT_VISIT_CHILDREN;
