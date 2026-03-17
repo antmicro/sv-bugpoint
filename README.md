@@ -87,7 +87,7 @@ This script works on a best-effort basis, and it is expected that the result wil
 
 ## Testing and linting
 
-`make`, `clang-format`, `shellcheck` and `verilator` are prerequisites for testing and linting.
+`make`, `clang-format`, `shellcheck`, `gawk` and `verilator` are prerequisites for testing and linting.
 
 To run all tests, linters and format-checkers, invoke:
 ```

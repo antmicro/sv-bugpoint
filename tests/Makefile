@@ -1,3 +1,4 @@
+SHELL=/bin/bash -o pipefail
 INPUT_DIR="input_files"
 
 .PHONY: test_dont_abort_after_err
@@ -123,7 +124,7 @@ test_caliptra_grep: test_caliptra_grep_default test_caliptra_grep_1_at_once
 	@# check if speculative reduction (used by default) lead to significant improvement
 	@# in terms of number of check script runs
 	@printf "TEST: caliptra_grep (speculative vs 1-at-once perf)\n"
-	@wc -l out/caliptra_grep_default/debug/trace out/caliptra_grep_1_at_once/debug/trace --total never | awk '\
+	@wc -l out/caliptra_grep_default/debug/trace out/caliptra_grep_1_at_once/debug/trace | gawk '\
 	NR==1{speculative=$$1} \
 	NR==2{serial=$$1} \
 	END{ \
