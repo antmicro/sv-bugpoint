@@ -241,7 +241,7 @@ enum class RewriteResult {
 };
 
 template <typename TDerived>
-RewriteResult rewrite(IncrementalRewriter<TDerived>& rewriter,
+RewriteResult rewrite(TDerived& rewriter,
                       std::shared_ptr<SyntaxTree>& tree,
                       std::string stageName,
                       std::string passIdx,
@@ -263,7 +263,7 @@ RewriteResult rewrite(IncrementalRewriter<TDerived>& rewriter,
 }
 
 template <typename TDerived>
-size_t rewriteBisectFailed(IncrementalRewriter<TDerived>& rewriter,
+size_t rewriteBisectFailed(TDerived& rewriter,
                            std::shared_ptr<SyntaxTree>& tree,
                            std::string stageName,
                            std::string passIdx,
@@ -288,7 +288,7 @@ size_t rewriteBisectFailed(IncrementalRewriter<TDerived>& rewriter,
 }
 
 template <typename TDerived>
-size_t rewriteBisect(IncrementalRewriter<TDerived>& rewriter,
+size_t rewriteBisect(TDerived& rewriter,
                      std::shared_ptr<SyntaxTree>& tree,
                      std::string stageName,
                      std::string passIdx,
@@ -326,7 +326,9 @@ bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,
                  std::string passIdx,
                  SvBugpoint* svBugpoint) {
     using enum RewriteResult;
-    IncrementalRewriter<TDerived> rewriter;
+    // Keep the concrete type here: derived rewriters can refresh state before delegating to the
+    // base transform().
+    TDerived rewriter;
     bool committed = false;
     size_t rewriteLimit = svBugpoint->n_at_once;
     while (!rewriter.traversalDone) {

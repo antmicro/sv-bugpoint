@@ -228,43 +228,6 @@ SetRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree) {
     return makeSetRemover<PortMapper>(tree);
 }
 
-class ExternMapper final : public ASTVisitor<ExternMapper, true, true, true> {
-    // Builds vector that maps the declarations (prototypes) and definitions (implementations) of
-    // extern methods
-   public:
-    std::vector<SetRemover::RemovalSet> removals;
-
-    void handle(const GenericClassDefSymbol& t) {
-        ASTVisitor<ExternMapper, true, true, true>::visitDefault(t);
-        if (t.numSpecializations() == 0) {
-            // in order to visit members of not specialized class we create an artificial
-            // specialization
-            t.getInvalidSpecialization().visit(*this);
-        }
-    }
-
-    void handle(const MethodPrototypeSymbol& proto) {
-        SourceRange protoLocation = SourceRange::NoLocation;
-        SourceRange implLocation = SourceRange::NoLocation;
-        ASSERT(proto.getSyntax(), "MethodPrototypeSymbol should have syntax node");
-        protoLocation = proto.getSyntax()->sourceRange();
-
-        auto impl = proto.getSubroutine();
-        if (impl && impl->getSyntax()) {
-            implLocation = impl->getSyntax()->sourceRange();
-        }
-
-        if (protoLocation != SourceRange::NoLocation || implLocation != SourceRange::NoLocation) {
-            removals.push_back({protoLocation, implLocation});
-        }
-        visitDefault(proto);
-    }
-};
-
-SetRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree) {
-    return makeSetRemover<ExternMapper>(tree);
-}
-
 class StructFieldMapper final : public ASTVisitor<StructFieldMapper, true, true, true> {
     // Builds vector that maps the definitions  and initializations of struct fields
    public:

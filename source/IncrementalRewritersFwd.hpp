@@ -19,6 +19,7 @@ class InstantationRemover;
 class BindRemover;
 class ModuleRemover;
 class TypeSimplifier;
+class ExternInliner;
 
 template <typename T>
 bool rewriteLoop(std::shared_ptr<SyntaxTree>& tree,

@@ -77,5 +77,4 @@ class SetRemover : public SyntaxRewriter<SetRemover> {
 
 SetRemover makeFunctionArgRemover(std::shared_ptr<SyntaxTree> tree);
 SetRemover makePortsRemover(std::shared_ptr<SyntaxTree> tree);
-SetRemover makeExternRemover(std::shared_ptr<SyntaxTree> tree);
 SetRemover makeStructFieldRemover(std::shared_ptr<SyntaxTree> tree);
