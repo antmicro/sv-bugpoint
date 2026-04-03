@@ -1,0 +1,29 @@
+From 21fad6075b36cae8964b81b1da4bd722a5fc2580 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bart=C5=82omiej=20Chmiel?= <bchmiel@antmicro.com>
+Date: Fri, 3 Apr 2026 08:56:49 +0200
+Subject: [PATCH] slang: find exact boost version
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Bartłomiej Chmiel <bchmiel@antmicro.com>
+---
+ external/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
+index 4a19b63a8..7756851fd 100644
+--- a/external/CMakeLists.txt
++++ b/external/CMakeLists.txt
+@@ -54,7 +54,7 @@ else()
+ endif()
+ 
+ # --- boost ---
+-find_package(Boost 1.87.0 CONFIG QUIET)
++find_package(Boost 1.87.0 EXACT)
+ if(NOT Boost_FOUND)
+   message(STATUS "Using vendored boost_unordered header")
+ 
+-- 
+2.53.0
+
