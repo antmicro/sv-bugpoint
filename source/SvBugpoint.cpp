@@ -275,7 +275,9 @@ bool SvBugpoint::pass(const std::string& passIdx) {
         commited |= rewriteLoop<ModuleRemover>(tree, "moduleRemover", passIdx, this);
         commited |= rewriteLoop<TypeSimplifier>(tree, "typeSimplifier", passIdx, this);
         commited |= rewriteLoop<LabelRemover>(tree, "LabelRemover", passIdx, this);
-        commited |= lineRemover(tree, "lineRemover", passIdx, this);
+        if (!disableLineRemover.value_or(false)) {
+            commited |= lineRemover(tree, "lineRemover", passIdx, this);
+        }
     }
 
     return commited;
@@ -438,6 +440,9 @@ void SvBugpoint::addArgs() {
     cmdLine.add("--force", force, "overwrite files in outDir without prompting");
     cmdLine.add("--save-intermediates", saveIntermediates, "save output of each removal attempt");
     cmdLine.add("--dump-trees", dump, "dump parse tree and elaborated AST of input code");
+    cmdLine.add("--fno-line-remover", disableLineRemover,
+                "Disable line remover.\n"
+                "WARNING: This option is experimental only, and will be removed eventually.");
     cmdLine.add(
         "-f",
         [this](std::string_view value) {

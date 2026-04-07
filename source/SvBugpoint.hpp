@@ -123,6 +123,7 @@ class SvBugpoint {
     std::optional<bool> force;
     // Flag for saving intermediate output of each attempt
     std::optional<bool> saveIntermediates;
+    std::optional<bool> disableLineRemover;
     std::optional<bool> showHelp;
     fs::path workDir;
     flat_hash_set<fs::path> activeCommandFiles;
