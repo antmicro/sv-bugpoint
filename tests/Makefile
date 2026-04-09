@@ -130,3 +130,7 @@ test_caliptra_grep: test_caliptra_grep_default test_caliptra_grep_1_at_once
 .PHONY: test_disable_line_remover
 test_disable_line_remover:
 	@./run_test disable_line_remover checkgrep.sh ${INPUT_DIR}/disable_line_remover.sv --fno-line-remover
+
+.PHONY: test_remove_covergroup
+test_remove_covergroup:
+	@./run_test remove_covergroup checkgrepfinish.sh ${INPUT_DIR}/remove_covergroup.sv

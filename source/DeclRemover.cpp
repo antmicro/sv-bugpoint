@@ -62,6 +62,11 @@ class DeclRemover : public IncrementalRewriter<DeclRemover> {
         removeNode(node, isNodeRemovable);
         return VISIT_CHILDREN;
     }
+
+    ShouldVisitChildren handle(const CovergroupDeclarationSyntax& node, bool isNodeRemovable) {
+        removeNode(node, isNodeRemovable);
+        return DONT_VISIT_CHILDREN;
+    }
 };
 
 template bool rewriteLoop<DeclRemover>(std::shared_ptr<SyntaxTree>& tree,
