@@ -169,12 +169,12 @@ class IncrementalRewriter : public SyntaxRewriter<TDerived> {
     }
 
     template <typename TOrig, typename TNew>
-    void replaceNode(const TOrig& originalNode, TNew& newNode) {
+    void replaceNode(const TOrig& originalNode, TNew& newNode, bool preserveTrivia = false) {
         if (shouldReplace(originalNode)) {
             logType<TOrig>();
             std::cerr << prefixLines(originalNode.toString(), "-") << "\n";
             std::cerr << prefixLines(newNode.toString(), "+") << "\n";
-            DERIVED->replace(originalNode, newNode);
+            DERIVED->replace(originalNode, newNode, preserveTrivia);
             checkPoints.push_back({originalNode.sourceRange()});
             state = REGISTER_CHILD;
         }

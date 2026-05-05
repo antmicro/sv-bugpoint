@@ -12,26 +12,6 @@ static bool hasExternQualifier(const TokenList& qualifiers) {
     return false;
 }
 
-static std::vector<parsing::Trivia> mergeExternLeadingTrivia(
-    const std::vector<parsing::Trivia>& movedTrivia,
-    std::span<const parsing::Trivia> originalTrivia) {
-    std::vector<parsing::Trivia> mergedTrivia;
-    mergedTrivia.reserve(movedTrivia.size() + originalTrivia.size());
-    mergedTrivia.insert(mergedTrivia.end(), movedTrivia.begin(), movedTrivia.end());
-
-    size_t firstTrivia = 0;
-    if (!movedTrivia.empty() && !originalTrivia.empty() &&
-        originalTrivia.front().kind == parsing::TriviaKind::Whitespace) {
-        // Remove the single separator space that used to be between `extern` and
-        // the next token (for example, `extern virtual` -> `virtual`).
-        firstTrivia = 1;
-    }
-
-    mergedTrivia.insert(mergedTrivia.end(), originalTrivia.begin() + firstTrivia,
-                        originalTrivia.end());
-    return mergedTrivia;
-}
-
 struct ExternInlineCandidate {
     // Clone the declaration body, but remove the whole source node that owns it.
     not_null<const FunctionDeclarationSyntax*> implementationDecl;
@@ -177,7 +157,7 @@ class ExternInliner : public IncrementalRewriter<ExternInliner> {
             }
 
             if (out.empty() && !leadingExternTrivia.empty()) {
-                auto mergedTrivia = mergeExternLeadingTrivia(leadingExternTrivia, token.trivia());
+                auto mergedTrivia = mergeMovedLeadingTrivia(leadingExternTrivia, token.trivia());
                 auto copiedTrivia = alloc.copyFrom(std::span<const parsing::Trivia>(mergedTrivia));
                 out.push_back(token.withTrivia(alloc, copiedTrivia));
                 leadingExternTrivia.clear();
@@ -212,7 +192,7 @@ class ExternInliner : public IncrementalRewriter<ExternInliner> {
             auto* firstTok = classMethod.getFirstTokenPtr();
             ASSERT(firstTok, "inlined class method must have a first token");
 
-            auto mergedTrivia = mergeExternLeadingTrivia(leadingExternTrivia, firstTok->trivia());
+            auto mergedTrivia = mergeMovedLeadingTrivia(leadingExternTrivia, firstTok->trivia());
             auto copiedTrivia = alloc.copyFrom(std::span<const parsing::Trivia>(mergedTrivia));
             *firstTok = firstTok->withTrivia(alloc, copiedTrivia);
         }

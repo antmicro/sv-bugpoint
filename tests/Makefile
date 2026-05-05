@@ -8,7 +8,7 @@ test_dont_abort_after_err:
 test: test_short test_caliptra test_comment_dir test_tricky_missing_newline test_irremovable_verilator_config test_comment_dir2
 
 .PHONY: test_short
-test_short: test_short_exit0 test_extern_inline test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg test_generate
+test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg test_generate test_extern_inline test_if_body_replacer
 
 .PHONY: test_short_exit0
 test_short_exit0:
@@ -55,6 +55,11 @@ test_short_exit1:
 .PHONY: test_generate
 test_generate:
 	@./run_test generate checkverilator_run_finish.sh ${INPUT_DIR}/generate.sv
+
+.PHONY: test_if_body_replacer
+test_if_body_replacer:
+	@./run_test if_body_replacer check_if_body_replacer.sh ${INPUT_DIR}/if_body_replacer.sv && \
+	awk -F'\t' '$$1 ~ /^[0-9]+$$/ && $$1 > 3 {print "check on trace failed - ifBodyReplacer should need at most three passes"; exit(1)}' out/if_body_replacer/debug/trace
 
 .PHONY: test_short_grep
 test_short_grep:

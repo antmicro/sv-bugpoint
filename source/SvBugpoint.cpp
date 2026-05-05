@@ -260,6 +260,8 @@ bool SvBugpoint::pass(const std::string& passIdx) {
         commited |= rewriteLoop<InstantationRemover>(tree, "instantiationRemover", passIdx, this);
         commited |= rewriteLoop<BindRemover>(tree, "bindRemover", passIdx, this);
         commited |= rewriteLoop<BodyPartsRemover>(tree, "bodyPartsRemover", passIdx, this);
+        commited |= rewriteLoop<IfBodyReplacer>(tree, "ifBodyReplacer", passIdx, this);
+        commited |= rewriteLoop<ElseBodyReplacer>(tree, "elseBodyReplacer", passIdx, this);
         commited |= rewriteLoop<ExternInliner>(tree, "externInliner", passIdx, this);
         commited |= rewriteLoop<DeclRemover>(tree, "declRemover", passIdx, this);
         commited |= rewriteLoop<StatementsRemover>(tree, "statementsRemover", passIdx, this);

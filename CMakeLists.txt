@@ -19,6 +19,7 @@ add_executable(sv-bugpoint
   source/SetRemovers.cpp
   source/ExternInliner.cpp
   source/BodyRemover.cpp
+  source/IfBodyReplacer.cpp
   source/LabelRemover.cpp
   source/BodyPartsRemover.cpp
   source/DeclRemover.cpp

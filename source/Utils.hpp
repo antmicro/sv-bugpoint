@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+#include <slang/parsing/Token.h>
 #include <slang/syntax/SyntaxTree.h>
 #include <chrono>
+#include <span>
 #include <string>
+#include <vector>
 
 using namespace slang::ast;
 using namespace slang::syntax;
@@ -48,6 +51,10 @@ int countLines(const std::string& filename);
 std::string prefixLines(const std::string& str, const std::string& linePrefix);
 void printSyntaxTree(const std::shared_ptr<SyntaxTree>& tree, std::ostream& file);
 void printAst(const RootSymbol& root, std::ostream& file);
+
+std::vector<parsing::Trivia> mergeMovedLeadingTrivia(
+    const std::vector<parsing::Trivia>& movedTrivia,
+    std::span<const parsing::Trivia> originalTrivia);
 
 // NOTE: doing it as variadic func rather than macro would prevent
 // compiler from issuing warnings about incorrect format string

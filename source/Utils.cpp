@@ -211,3 +211,68 @@ std::string prefixLines(const std::string& str, const std::string& linePrefix) {
     }
     return out;
 }
+
+std::vector<parsing::Trivia> mergeMovedLeadingTrivia(
+    const std::vector<parsing::Trivia>& movedTrivia,
+    std::span<const parsing::Trivia> originalTrivia) {
+    std::vector<parsing::Trivia> mergedTrivia;
+    mergedTrivia.reserve(movedTrivia.size() + originalTrivia.size());
+    mergedTrivia.insert(mergedTrivia.end(), movedTrivia.begin(), movedTrivia.end());
+
+    auto appendOriginalTrivia = [&](size_t firstTrivia) {
+        mergedTrivia.insert(mergedTrivia.end(), originalTrivia.begin() + firstTrivia,
+                            originalTrivia.end());
+    };
+
+    if (movedTrivia.empty() || originalTrivia.empty()) {
+        appendOriginalTrivia(0);
+        return mergedTrivia;
+    }
+
+    if (originalTrivia.front().kind == parsing::TriviaKind::Whitespace) {
+        // Remove the single separator space that used to be between a removed keyword and
+        // the next token (for example, `extern virtual` -> `virtual`).
+        appendOriginalTrivia(1);
+        return mergedTrivia;
+    }
+
+    if ((movedTrivia.back().kind == parsing::TriviaKind::Whitespace ||
+         movedTrivia.back().kind == parsing::TriviaKind::EndOfLine) &&
+        originalTrivia.front().kind == parsing::TriviaKind::EndOfLine) {
+        // IfBodyReplacer moves the `if` token's leading indentation onto the promoted statement.
+        // Drop the statement's old opening `\n + indent` and if comments remain before the
+        // token, replace indentation after their newlines too:
+        //   if (cond)                // body comment
+        //     // body comment  ->    stmt;
+        //     stmt;
+        std::span<const parsing::Trivia> movedIndentation;
+        for (size_t idx = movedTrivia.size(); idx > 0; --idx) {
+            if (movedTrivia[idx - 1].kind == parsing::TriviaKind::EndOfLine) {
+                movedIndentation = std::span<const parsing::Trivia>(movedTrivia).subspan(idx);
+                break;
+            }
+        }
+
+        // originalTrivia[0] is the promoted body's old EOL. originalTrivia[1], when it is
+        // whitespace, is the old nested indentation after that EOL. Drop both before appending
+        // any retained comments/directives and the final token.
+        size_t firstTrivia =
+            originalTrivia.size() > 1 && originalTrivia[1].kind == parsing::TriviaKind::Whitespace
+                ? 2
+                : 1;
+        for (size_t idx = firstTrivia; idx < originalTrivia.size(); ++idx) {
+            if (originalTrivia[idx].kind == parsing::TriviaKind::Whitespace &&
+                !mergedTrivia.empty() &&
+                mergedTrivia.back().kind == parsing::TriviaKind::EndOfLine) {
+                mergedTrivia.insert(mergedTrivia.end(), movedIndentation.begin(),
+                                    movedIndentation.end());
+            } else {
+                mergedTrivia.push_back(originalTrivia[idx]);
+            }
+        }
+        return mergedTrivia;
+    }
+
+    appendOriginalTrivia(0);
+    return mergedTrivia;
+}
