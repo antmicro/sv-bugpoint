@@ -35,7 +35,12 @@ add_executable(sv-bugpoint
   source/TypeSimplifier.cpp
 )
 
+add_executable(sv-obfuscate
+  source/SvObfuscate.cpp
+)
+
 target_link_libraries(sv-bugpoint PRIVATE slang::slang)
+target_link_libraries(sv-obfuscate PRIVATE slang::slang)
 target_precompile_headers(sv-bugpoint PUBLIC
   <string>
   <filesystem>

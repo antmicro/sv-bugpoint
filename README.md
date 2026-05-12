@@ -29,7 +29,7 @@ cmake --build build -j8
 ```
 
 The dependencies will be fetched and built automatically.
-The `sv-bugpoint` executable is placed in the `build/sv-bugpoint` directory.
+The `sv-bugpoint` and `sv-obfuscate` executables are placed in the `build/` directory.
 If you are going to use the accompanying scripts, it is recommended to add the entire `scripts/` dir
 to your path, as some scripts may depend on each other.
 
@@ -84,6 +84,25 @@ The script attempts to:
   - an example assertion for a simple failure case.
 
 This script works on a best-effort basis, and it is expected that the result will require some manual adjustments.
+
+### Obfuscating minimized code
+
+While `sv-bugpoint` removes parts of code not needed for reproduction, the result still includes
+names that may leak some details of your protected IP design. If that's your concern, you can use
+the `sv-obfuscate` companion tool which replaces real identifiers with meaningless pseudonyms.
+
+#### Usage
+
+```sh
+sv-bugpoint-obfuscate <OUTPUT_DIR> <INPUT_SV> [<INPUT_SV>...]
+```
+
+The obfuscated files are written to <OUTPUT_DIR>, and a translation map from
+original identifiers to generated names is printed to standard output.
+
+#### Limitations:
+- Macros are not obfuscated
+- Non-standard syntax extensions (such as `verilator_config` block) may be misrecognized as identifiers.
 
 ## Testing and linting
 

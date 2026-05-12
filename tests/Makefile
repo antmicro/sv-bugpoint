@@ -145,3 +145,11 @@ test_disable_line_remover:
 .PHONY: test_remove_covergroup
 test_remove_covergroup:
 	@./run_test remove_covergroup checkgrepfinish.sh ${INPUT_DIR}/remove_covergroup.sv
+
+.PHONY: test_obfuscate_short_in
+test_obfuscate_short_in:
+	@./run_test_obfuscate obfuscate_short_in ${INPUT_DIR}/short_in.sv
+
+.PHONY: test_obfuscate_short_in_multi_file
+test_obfuscate_short_in_multi_file:
+	@./run_test_obfuscate obfuscate_short_in_multi_file ${INPUT_DIR}/short_in/a.sv ${INPUT_DIR}/short_in/subdir/a.sv ${INPUT_DIR}/short_in/c.sv ${INPUT_DIR}/short_in/d.sv

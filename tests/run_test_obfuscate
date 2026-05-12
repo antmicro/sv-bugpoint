@@ -1,0 +1,32 @@
+#!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+
+# usage: run_test_obfuscate test_name input_files...
+printf "TEST: %s\n" "$1"
+
+
+[ "$#" -lt 2 ] && { printf "error: missing test name and input\n"; exit 1; }
+
+TEST_NAME="$1"
+shift
+
+
+OUT_DIR=out/"$TEST_NAME"/
+[ -e "$OUT_DIR" ] && rm -r "$OUT_DIR" # to not get fake PASS if sv-obfuscate did not overwrite old result
+GOLDEN_DIR=golden/"$TEST_NAME"/
+
+OBFUSCATE_MSG=$(sv-obfuscate "${OUT_DIR}" "$@" 2>&1) || (printf "%s\n" "$OBFUSCATE_MSG" >&2; exit 1)
+
+diff "$GOLDEN_DIR" "$OUT_DIR" --color=always >&2
+
+EXIT_CODE=$?
+
+[ "$EXIT_CODE" -eq 0 ] && printf "PASSED\n\n" || printf "FAILED\n\n"
+GOLDEN="${GOLDEN:-}"
+if [ -n "$GOLDEN" ]; then
+  rm -r "$GOLDEN_DIR"
+  cp -r "$OUT_DIR" "$GOLDEN_DIR"
+fi
+
+exit $EXIT_CODE
+
