@@ -3,6 +3,7 @@ stages:
 
 variables:
   GIT_DEPTH: 1
+  SCALENODE_RAM: 16384
 
 test-and-lint:
   image: "verilator/verilator:v5.016"
