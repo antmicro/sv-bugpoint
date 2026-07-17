@@ -9,7 +9,7 @@ test_dont_abort_after_err:
 test: test_short test_caliptra test_comment_dir test_tricky_missing_newline test_irremovable_verilator_config test_comment_dir2
 
 .PHONY: test_short
-test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg test_generate test_extern_inline test_if_body_replacer
+test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg test_generate test_extern_inline test_if_body_replacer test_remove_property
 
 .PHONY: test_short_exit0
 test_short_exit0:
@@ -145,6 +145,10 @@ test_disable_line_remover:
 .PHONY: test_remove_covergroup
 test_remove_covergroup:
 	@./run_test remove_covergroup checkgrepfinish.sh ${INPUT_DIR}/remove_covergroup.sv
+
+.PHONY: test_remove_property
+test_remove_property:
+	@./run_test remove_property checkgrepfinish.sh ${INPUT_DIR}/remove_property.sv
 
 .PHONY: test_obfuscate_short_in
 test_obfuscate_short_in:

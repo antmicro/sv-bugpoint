@@ -67,6 +67,11 @@ class DeclRemover : public IncrementalRewriter<DeclRemover> {
         removeNode(node, isNodeRemovable);
         return DONT_VISIT_CHILDREN;
     }
+
+    ShouldVisitChildren handle(const PropertyDeclarationSyntax& node, bool isNodeRemovable) {
+        removeNode(node, isNodeRemovable);
+        return DONT_VISIT_CHILDREN;
+    }
 };
 
 template bool rewriteLoop<DeclRemover>(std::shared_ptr<SyntaxTree>& tree,
