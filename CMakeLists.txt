@@ -33,6 +33,7 @@ add_executable(sv-bugpoint
   source/MemberRemover.cpp
   source/ImportsRemover.cpp
   source/TypeSimplifier.cpp
+  source/ParamConstantFolder.cpp
 )
 
 add_executable(sv-obfuscate

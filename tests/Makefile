@@ -9,7 +9,7 @@ test_dont_abort_after_err:
 test: test_short test_caliptra test_comment_dir test_tricky_missing_newline test_irremovable_verilator_config test_comment_dir2
 
 .PHONY: test_short
-test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg test_generate test_extern_inline test_if_body_replacer test_remove_property test_remove_sequence
+test_short: test_short_exit0 test_truncator test_short_exit1 test_short_grep test_short_verilator_errmsg test_short_multi_file_verilator_errmsg test_short_multi_file_flag_y_verilator_errmsg test_short_multi_file_flag_f_verilator_errmsg test_generate test_extern_inline test_if_body_replacer test_remove_property test_remove_sequence test_param_replacer
 
 .PHONY: test_short_exit0
 test_short_exit0:
@@ -141,6 +141,10 @@ test_caliptra_grep: test_caliptra_grep_default test_caliptra_grep_1_at_once
 .PHONY: test_disable_line_remover
 test_disable_line_remover:
 	@./run_test disable_line_remover checkgrep.sh ${INPUT_DIR}/disable_line_remover.sv --fno-line-remover
+
+.PHONY: test_param_replacer
+test_param_replacer:
+	@./run_test param check_param_replacer.sh ${INPUT_DIR}/param.sv
 
 .PHONY: test_remove_covergroup
 test_remove_covergroup:

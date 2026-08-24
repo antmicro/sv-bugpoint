@@ -268,6 +268,7 @@ bool SvBugpoint::pass(const std::string& passIdx) {
         commited |= rewriteLoop<ImportsRemover>(tree, "importsRemover", passIdx, this);
         commited |= rewriteLoop<ParamAssignRemover>(tree, "paramAssignRemover", passIdx, this);
         commited |= rewriteLoop<ContAssignRemover>(tree, "contAssignRemover", passIdx, this);
+        commited |= rewriteLoop<ParamConstantFolder>(tree, "paramConstantFolder", passIdx, this);
         commited |= rewriteLoop<MemberRemover>(tree, "memberRemover", passIdx, this);
         commited |= rewriteLoop<ModportRemover>(tree, "modportRemover", passIdx, this);
         commited |= rewriteLoop(makePortsRemover(tree), tree, "portsRemover", passIdx, this);

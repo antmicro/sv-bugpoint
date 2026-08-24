@@ -43,6 +43,7 @@ class AttemptStats {
 };
 
 std::string toString(SourceRange sourceRange);
+std::string trim(const std::string_view str);
 
 void copyFile(const std::string& from, const std::string& to);
 void mkdir(const std::string& path);

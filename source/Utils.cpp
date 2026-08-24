@@ -137,6 +137,15 @@ std::string toString(SourceRange sourceRange) {
     }
 }
 
+std::string trim(const std::string_view str) {
+    const static auto is_space = [](const char c) -> bool {
+        return std::isspace(c, std::locale{});
+    };
+    auto view = (str | std::views::drop_while(is_space) | std::views::reverse |
+                 std::views::drop_while(is_space) | std::views::reverse);
+    return {view.begin(), view.end()};
+}
+
 void copyFile(const std::string& from, const std::string& to) {
     if (from == to) {
         return;
