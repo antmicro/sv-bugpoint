@@ -6,7 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 FetchContent_Declare(
   slang
-  GIT_REPOSITORY https://github.com/MikePopoloski/slang.git
+  GIT_REPOSITORY http://github.com/MikePopoloski/slang
   GIT_TAG 3d7e6cd2e213e62480b2afcba677a3d12aa4e162
   # Slang breaks on Boost 1.89.0, patch to use exact version matching
   PATCH_COMMAND git checkout . && git apply ${CMAKE_CURRENT_LIST_DIR}/external/0001-slang-find-exact-boost-version.patch
