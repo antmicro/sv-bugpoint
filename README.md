@@ -94,7 +94,7 @@ the `sv-obfuscate` companion tool which replaces real identifiers with meaningle
 #### Usage
 
 ```sh
-sv-bugpoint-obfuscate <OUTPUT_DIR> <INPUT_SV> [<INPUT_SV>...]
+sv-obfuscate <OUTPUT_DIR> <INPUT_SV> [<INPUT_SV>...]
 ```
 
 The obfuscated files are written to <OUTPUT_DIR>, and a translation map from
