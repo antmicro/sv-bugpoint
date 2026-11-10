@@ -58,7 +58,7 @@ It should be treated more as live preview of how minimization is going rather th
 
 There are flags that enable additional dumps:
 - `--save-intermediates` saves each removal attempt in `<OUT_DIR>/debug/attempts/<INPUT_SV>.<index>.sv`.
-- `--dump-trees` saves dumps of Slang's AST in `<OUT_DIR>/debug/`
+- `--dump-trees` saves dumps of Slang's AST in `<OUT_DIR>/debug/`. All input files are elaborated together.
 
 To get more information about available flags, run `sv-bugpoint --help`.
 

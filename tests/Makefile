@@ -32,7 +32,8 @@ TEST_CASES := \
 	test_remove_property \
 	test_remove_sequence \
 	test_obfuscate_short_in \
-	test_obfuscate_short_in_multi_file
+	test_obfuscate_short_in_multi_file \
+	test_dump_trees_multi_file
 
 .PHONY: test test_dont_abort_after_err $(TEST_CASES)
 
@@ -40,6 +41,25 @@ test_dont_abort_after_err:
 	@$(MAKE) -k test
 
 test: $(TEST_CASES)
+
+# --dump-trees elaborates all inputs in one compilation, so cells defined in another file resolve.
+.PHONY: test_dump_trees_multi_file
+test_dump_trees_multi_file:
+	@printf "TEST: dump_trees_multi_file\n"
+	@mkdir -p out
+	@rm -rf out/dump_multi
+	@sv-bugpoint out/dump_multi checkexit0.sh -f ${INPUT_DIR}/short_in/filelist.f --dump-trees \
+	  --force >/dev/null 2>&1
+	@files=$$(grep -c '^//// ' out/dump_multi/debug/syntax-dump); \
+	if [ "$$files" -ne 4 ]; then \
+	  printf "FAILED: the syntax dump covered %s of 4 inputs\n" "$$files" >&2; exit 1; \
+	fi
+	@bodies=$$(grep -c 'node: InstanceBodySymbol' out/dump_multi/debug/ast-dump); \
+	if [ "$$bodies" -lt 33 ]; then \
+	  printf "FAILED: cells defined in another file did not elaborate (bodies=%s)\n" "$$bodies" >&2; \
+	  exit 1; \
+	fi
+	@printf "PASSED: --dump-trees covers every input in one elaboration\n\n"
 
 test_short_exit0:
 	@./run_test short_exit0 checkexit0.sh ${INPUT_DIR}/short_in.sv

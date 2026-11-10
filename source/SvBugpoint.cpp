@@ -395,28 +395,34 @@ void SvBugpoint::dryRun() {
 }
 
 void SvBugpoint::checkDumpTrees() {
-    if (dump.value_or(false)) {
-        for (size_t i = 0; i < inputFiles.size(); i++) {
-            currentPathIdx = i;
-            auto treeOrErr = SyntaxTree::fromFile(std::string(getOriginalFile()));
-            if (treeOrErr) {
-                auto tree = *treeOrErr;
-
-                std::ofstream syntaxDumpFile(getDumpSyntaxFile()), astDumpFile(getDumpAstFile());
-                printSyntaxTree(tree, syntaxDumpFile);
-
-                Compilation compilation;
-                compilation.addSyntaxTree(tree);
-                compilation.getAllDiagnostics();  // kludge for launching full elaboration
-
-                printAst(compilation.getRoot(), astDumpFile);
-            } else {
-                PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
-                           std::string(treeOrErr.error().second).c_str());
-                exit(1);
-            }
-        }
+    if (!dump.value_or(false)) {
+        return;
     }
+
+    // Elaborate every input together, in one compilation.
+    std::vector<std::shared_ptr<SyntaxTree>> trees;
+    std::ofstream syntaxDumpFile(getDumpSyntaxFile());
+    for (size_t i = 0; i < inputFiles.size(); i++) {
+        currentPathIdx = i;
+        auto treeOrErr = SyntaxTree::fromFile(std::string(getOriginalFile()));
+        if (!treeOrErr) {
+            PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
+                       std::string(treeOrErr.error().second).c_str());
+            exit(1);
+        }
+        trees.push_back(*treeOrErr);
+        syntaxDumpFile << "//// " << getShortPath() << "\n";
+        printSyntaxTree(trees.back(), syntaxDumpFile);
+    }
+
+    Compilation compilation;
+    for (auto& tree : trees) {
+        compilation.addSyntaxTree(tree);
+    }
+    compilation.getAllDiagnostics();  // kludge for launching full elaboration
+
+    std::ofstream astDumpFile(getDumpAstFile());
+    printAst(compilation.getRoot(), astDumpFile);
 }
 
 void SvBugpoint::saveCombinedOutput() {
