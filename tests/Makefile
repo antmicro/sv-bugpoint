@@ -33,7 +33,8 @@ TEST_CASES := \
 	test_remove_sequence \
 	test_obfuscate_short_in \
 	test_obfuscate_short_in_multi_file \
-	test_dump_trees_multi_file
+	test_dump_trees_multi_file \
+	test_command_file_options
 
 .PHONY: test test_dont_abort_after_err $(TEST_CASES)
 
@@ -60,6 +61,20 @@ test_dump_trees_multi_file:
 	  exit 1; \
 	fi
 	@printf "PASSED: --dump-trees covers every input in one elaboration\n\n"
+
+# Command files carry options as well as input paths.
+.PHONY: test_command_file_options
+test_command_file_options:
+	@printf "TEST: command_file_options\n"
+	@mkdir -p out/cmdfile
+	@rm -rf out/cf_opts
+	@printf -- '# a comment line, and a blank one follow\n\n--save-intermediates\n' \
+	  > out/cmdfile/save.txt
+	@sv-bugpoint out/cf_opts checkexit0.sh ${INPUT_DIR}/short_in.sv -f out/cmdfile/save.txt \
+	  --force >/dev/null 2>&1
+	@[ -n "$$(ls -A out/cf_opts/debug/attempts 2>/dev/null)" ] || \
+	  (printf "FAILED: --save-intermediates from a command file was ignored\n" >&2; exit 1)
+	@printf "PASSED: options in a command file take effect, comments and blank lines ignored\n\n"
 
 test_short_exit0:
 	@./run_test short_exit0 checkexit0.sh ${INPUT_DIR}/short_in.sv

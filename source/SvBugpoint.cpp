@@ -513,9 +513,21 @@ void SvBugpoint::processCommandFiles(fs::path file) {
     std::string line;
     std::ifstream input(file);
     while (std::getline(input, line)) {
-        if (!line.starts_with("-")) {
-            inputStr.append((file.parent_path() / fs::path(line)).string() + " ");
+        std::string_view trimmed = line;
+        trimmed.remove_prefix(std::min(trimmed.find_first_not_of(" \t\r"), trimmed.size()));
+        while (!trimmed.empty() &&
+               (trimmed.back() == ' ' || trimmed.back() == '\t' || trimmed.back() == '\r')) {
+            trimmed.remove_suffix(1);
         }
+        if (trimmed.empty() || trimmed.starts_with("#") || trimmed.starts_with("//")) {
+            continue;
+        }
+        if (trimmed.starts_with("-")) {
+            // Option values are not resolved against the command file's directory.
+            inputStr.append(trimmed).append(" ");
+            continue;
+        }
+        inputStr.append((file.parent_path() / fs::path(trimmed)).string()).append(" ");
     }
 
     CommandLine::ParseOptions parseOpts;
