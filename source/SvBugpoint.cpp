@@ -574,6 +574,21 @@ void SvBugpoint::parseArgs(int argc, char** argv) {
         // happens when there is no slash)
         checkScript = "./" + checkScript;
     }
+    // initOutDir() needs a canonical path for every input.
+    bool missing = false;
+    for (auto& input : inputFiles) {
+        std::error_code err;
+        if (!fs::is_regular_file(input, err)) {
+            PRINTF_ERR("input file '%s' does not exist or is not a regular file\n", input.c_str());
+            missing = true;
+        }
+    }
+    if (missing) {
+        PRINTF_ERR(
+            "paths in a -f command file are positional too; put -f after outDir/ and the "
+            "check script\n");
+        exit(1);
+    }
 }
 
 int main(int argc, char** argv) {

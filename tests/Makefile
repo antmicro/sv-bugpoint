@@ -34,7 +34,8 @@ TEST_CASES := \
 	test_obfuscate_short_in \
 	test_obfuscate_short_in_multi_file \
 	test_dump_trees_multi_file \
-	test_command_file_options
+	test_command_file_options \
+	test_missing_input
 
 .PHONY: test test_dont_abort_after_err $(TEST_CASES)
 
@@ -75,6 +76,21 @@ test_command_file_options:
 	@[ -n "$$(ls -A out/cf_opts/debug/attempts 2>/dev/null)" ] || \
 	  (printf "FAILED: --save-intermediates from a command file was ignored\n" >&2; exit 1)
 	@printf "PASSED: options in a command file take effect, comments and blank lines ignored\n\n"
+
+# A missing input file is reported, not a crash.
+.PHONY: test_missing_input
+test_missing_input:
+	@printf "TEST: missing_input\n"
+	@mkdir -p out
+	@rm -rf out/missing_input
+	@sv-bugpoint out/missing_input checkexit0.sh ${INPUT_DIR}/no_such_file.sv --force \
+	  >/dev/null 2>out/missing_input.err; rc=$$?; \
+	if [ "$$rc" -ne 1 ]; then \
+	  printf "FAILED: expected exit code 1, got %s\n" "$$rc" >&2; exit 1; \
+	fi
+	@grep -q "no_such_file.sv' does not exist" out/missing_input.err || \
+	  (printf "FAILED: the missing file was not named\n" >&2; cat out/missing_input.err >&2; exit 1)
+	@printf "PASSED: a missing input file is named and the run stops cleanly\n\n"
 
 test_short_exit0:
 	@./run_test short_exit0 checkexit0.sh ${INPUT_DIR}/short_in.sv
