@@ -11,6 +11,9 @@ FetchContent_Declare(
   # Slang breaks on Boost 1.89.0, patch to use exact version matching
   PATCH_COMMAND git checkout . && git apply ${CMAKE_CURRENT_LIST_DIR}/external/0001-slang-find-exact-boost-version.patch
 )
+# Slang breaks on system fmt 12.2+ (fmt/core.h no longer provides fmt::format),
+# always use the fmt version fetched by slang
+set(CMAKE_DISABLE_FIND_PACKAGE_fmt ON)
 FetchContent_MakeAvailable(slang)
 
 add_executable(sv-bugpoint
