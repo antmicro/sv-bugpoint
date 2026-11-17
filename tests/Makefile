@@ -32,7 +32,10 @@ TEST_CASES := \
 	test_remove_property \
 	test_remove_sequence \
 	test_obfuscate_short_in \
-	test_obfuscate_short_in_multi_file
+	test_obfuscate_short_in_multi_file \
+	test_dump_trees_multi_file \
+	test_command_file_options \
+	test_missing_input
 
 .PHONY: test test_dont_abort_after_err $(TEST_CASES)
 
@@ -40,6 +43,54 @@ test_dont_abort_after_err:
 	@$(MAKE) -k test
 
 test: $(TEST_CASES)
+
+# --dump-trees elaborates all inputs in one compilation, so cells defined in another file resolve.
+.PHONY: test_dump_trees_multi_file
+test_dump_trees_multi_file:
+	@printf "TEST: dump_trees_multi_file\n"
+	@mkdir -p out
+	@rm -rf out/dump_multi
+	@sv-bugpoint out/dump_multi checkexit0.sh -f ${INPUT_DIR}/short_in/filelist.f --dump-trees \
+	  --force >/dev/null 2>&1
+	@files=$$(grep -c '^//// ' out/dump_multi/debug/syntax-dump); \
+	if [ "$$files" -ne 4 ]; then \
+	  printf "FAILED: the syntax dump covered %s of 4 inputs\n" "$$files" >&2; exit 1; \
+	fi
+	@bodies=$$(grep -c 'node: InstanceBodySymbol' out/dump_multi/debug/ast-dump); \
+	if [ "$$bodies" -lt 33 ]; then \
+	  printf "FAILED: cells defined in another file did not elaborate (bodies=%s)\n" "$$bodies" >&2; \
+	  exit 1; \
+	fi
+	@printf "PASSED: --dump-trees covers every input in one elaboration\n\n"
+
+# Command files carry options as well as input paths.
+.PHONY: test_command_file_options
+test_command_file_options:
+	@printf "TEST: command_file_options\n"
+	@mkdir -p out/cmdfile
+	@rm -rf out/cf_opts
+	@printf -- '# a comment line, and a blank one follow\n\n--save-intermediates\n' \
+	  > out/cmdfile/save.txt
+	@sv-bugpoint out/cf_opts checkexit0.sh ${INPUT_DIR}/short_in.sv -f out/cmdfile/save.txt \
+	  --force >/dev/null 2>&1
+	@[ -n "$$(ls -A out/cf_opts/debug/attempts 2>/dev/null)" ] || \
+	  (printf "FAILED: --save-intermediates from a command file was ignored\n" >&2; exit 1)
+	@printf "PASSED: options in a command file take effect, comments and blank lines ignored\n\n"
+
+# A missing input file is reported, not a crash.
+.PHONY: test_missing_input
+test_missing_input:
+	@printf "TEST: missing_input\n"
+	@mkdir -p out
+	@rm -rf out/missing_input
+	@sv-bugpoint out/missing_input checkexit0.sh ${INPUT_DIR}/no_such_file.sv --force \
+	  >/dev/null 2>out/missing_input.err; rc=$$?; \
+	if [ "$$rc" -ne 1 ]; then \
+	  printf "FAILED: expected exit code 1, got %s\n" "$$rc" >&2; exit 1; \
+	fi
+	@grep -q "no_such_file.sv' does not exist" out/missing_input.err || \
+	  (printf "FAILED: the missing file was not named\n" >&2; cat out/missing_input.err >&2; exit 1)
+	@printf "PASSED: a missing input file is named and the run stops cleanly\n\n"
 
 test_short_exit0:
 	@./run_test short_exit0 checkexit0.sh ${INPUT_DIR}/short_in.sv

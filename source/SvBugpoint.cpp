@@ -395,28 +395,34 @@ void SvBugpoint::dryRun() {
 }
 
 void SvBugpoint::checkDumpTrees() {
-    if (dump.value_or(false)) {
-        for (size_t i = 0; i < inputFiles.size(); i++) {
-            currentPathIdx = i;
-            auto treeOrErr = SyntaxTree::fromFile(std::string(getOriginalFile()));
-            if (treeOrErr) {
-                auto tree = *treeOrErr;
-
-                std::ofstream syntaxDumpFile(getDumpSyntaxFile()), astDumpFile(getDumpAstFile());
-                printSyntaxTree(tree, syntaxDumpFile);
-
-                Compilation compilation;
-                compilation.addSyntaxTree(tree);
-                compilation.getAllDiagnostics();  // kludge for launching full elaboration
-
-                printAst(compilation.getRoot(), astDumpFile);
-            } else {
-                PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
-                           std::string(treeOrErr.error().second).c_str());
-                exit(1);
-            }
-        }
+    if (!dump.value_or(false)) {
+        return;
     }
+
+    // Elaborate every input together, in one compilation.
+    std::vector<std::shared_ptr<SyntaxTree>> trees;
+    std::ofstream syntaxDumpFile(getDumpSyntaxFile());
+    for (size_t i = 0; i < inputFiles.size(); i++) {
+        currentPathIdx = i;
+        auto treeOrErr = SyntaxTree::fromFile(std::string(getOriginalFile()));
+        if (!treeOrErr) {
+            PRINTF_ERR("failed to load '%s' file: %s\n", getOriginalFile().c_str(),
+                       std::string(treeOrErr.error().second).c_str());
+            exit(1);
+        }
+        trees.push_back(*treeOrErr);
+        syntaxDumpFile << "//// " << getShortPath() << "\n";
+        printSyntaxTree(trees.back(), syntaxDumpFile);
+    }
+
+    Compilation compilation;
+    for (auto& tree : trees) {
+        compilation.addSyntaxTree(tree);
+    }
+    compilation.getAllDiagnostics();  // kludge for launching full elaboration
+
+    std::ofstream astDumpFile(getDumpAstFile());
+    printAst(compilation.getRoot(), astDumpFile);
 }
 
 void SvBugpoint::saveCombinedOutput() {
@@ -507,9 +513,21 @@ void SvBugpoint::processCommandFiles(fs::path file) {
     std::string line;
     std::ifstream input(file);
     while (std::getline(input, line)) {
-        if (!line.starts_with("-")) {
-            inputStr.append((file.parent_path() / fs::path(line)).string() + " ");
+        std::string_view trimmed = line;
+        trimmed.remove_prefix(std::min(trimmed.find_first_not_of(" \t\r"), trimmed.size()));
+        while (!trimmed.empty() &&
+               (trimmed.back() == ' ' || trimmed.back() == '\t' || trimmed.back() == '\r')) {
+            trimmed.remove_suffix(1);
         }
+        if (trimmed.empty() || trimmed.starts_with("#") || trimmed.starts_with("//")) {
+            continue;
+        }
+        if (trimmed.starts_with("-")) {
+            // Option values are not resolved against the command file's directory.
+            inputStr.append(trimmed).append(" ");
+            continue;
+        }
+        inputStr.append((file.parent_path() / fs::path(trimmed)).string()).append(" ");
     }
 
     CommandLine::ParseOptions parseOpts;
@@ -555,6 +573,21 @@ void SvBugpoint::parseArgs(int argc, char** argv) {
         // check script is fed to execv that may need this (it is implementation-defined what
         // happens when there is no slash)
         checkScript = "./" + checkScript;
+    }
+    // initOutDir() needs a canonical path for every input.
+    bool missing = false;
+    for (auto& input : inputFiles) {
+        std::error_code err;
+        if (!fs::is_regular_file(input, err)) {
+            PRINTF_ERR("input file '%s' does not exist or is not a regular file\n", input.c_str());
+            missing = true;
+        }
+    }
+    if (missing) {
+        PRINTF_ERR(
+            "paths in a -f command file are positional too; put -f after outDir/ and the "
+            "check script\n");
+        exit(1);
     }
 }
 
